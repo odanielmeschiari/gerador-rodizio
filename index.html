@@ -19,6 +19,9 @@ input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);bor
 textarea{min-height:120px;resize:vertical}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:8px;margin-top:10px}
+.meses{display:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px 10px;margin-top:12px}
+.meses label{display:flex;align-items:center;gap:6px;font-weight:400;margin:0;cursor:pointer}
+.meses input{width:auto;margin:0}
 .hint{color:var(--mut);font-size:.85rem;margin:6px 0 0}
 .btns{display:flex;gap:10px;flex-wrap:wrap}
 button{padding:10px 18px;border-radius:8px;border:1px solid var(--ac2);background:var(--ac);color:var(--act);font:inherit;font-weight:600;cursor:pointer}
@@ -46,6 +49,17 @@ th{position:sticky;top:0;background:var(--card)}
   </div>
   <div class="dias" id="dias"></div>
   <p class="hint">A ordem dos dias importa: ela define como o rodízio gira entre as organistas.</p>
+</div>
+
+<div class="card">
+  <label for="per">Período a gerar</label>
+  <select id="per">
+    <option value="ano">Ano todo</option>
+    <option value="s1">1º semestre (jan a jun)</option>
+    <option value="s2">2º semestre (jul a dez)</option>
+    <option value="custom">Escolher meses</option>
+  </select>
+  <div class="meses" id="meses"></div>
 </div>
 
 <div class="card">
@@ -103,6 +117,27 @@ function montarSelects() {
   }
 }
 
+const MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+function montarMeses() {
+  const box = $("meses");
+  MESES.forEach((m, i) => {
+    const l = document.createElement("label");
+    const c = document.createElement("input");
+    c.type = "checkbox"; c.value = i + 1;
+    l.append(c, document.createTextNode(m));
+    box.append(l);
+  });
+}
+
+function mesesEscolhidos() {
+  const p = $("per").value;
+  if (p === "ano") return [1,2,3,4,5,6,7,8,9,10,11,12];
+  if (p === "s1") return [1,2,3,4,5,6];
+  if (p === "s2") return [7,8,9,10,11,12];
+  return [...$("meses").querySelectorAll("input:checked")].map(c => parseInt(c.value));
+}
+
 const csvCell = t => /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
 
 function gerar() {
@@ -131,6 +166,14 @@ function gerar() {
       }
     }
   }
+
+  // o rodízio é calculado para o ano todo e depois filtrado,
+  // assim a sequência das organistas continua igual em qualquer período
+  const sel = mesesEscolhidos();
+  if (!sel.length) return erro("Selecione ao menos um mês.");
+  const linhasFiltradas = linhas.filter(l => sel.includes(parseInt(l[1].slice(3, 5), 10)));
+  linhas.length = 0;
+  linhas.push(...linhasFiltradas);
 
   csv = "Dia,Data,Organista\n" + linhas.map(l => l.map(csvCell).join(",")).join("\n") + "\n";
 
@@ -167,6 +210,10 @@ async function baixar() {
 }
 
 $("ano").value = new Date().getFullYear();
+$("per").addEventListener("change", () => {
+  $("meses").style.display = $("per").value === "custom" ? "grid" : "none";
+});
+montarMeses();
 $("nd").addEventListener("input", montarSelects);
 $("gerar").addEventListener("click", gerar);
 $("baixar").addEventListener("click", baixar);
