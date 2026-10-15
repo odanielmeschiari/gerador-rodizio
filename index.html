@@ -86,7 +86,7 @@ button.peq{padding:6px 12px;font-size:.9rem}
 
 <script>
 const NOMES = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
-let csv = "";
+let linhasFinais = [];   // linhas com as trocas aplicadas (o que vai para a planilha)
 let linhasAtuais = [];   // linhas geradas pelo rodízio (sem trocas)
 let nomesAtuais = [];
 const trocas = {};       // data -> organista escolhida manualmente
@@ -147,8 +147,6 @@ function mesesEscolhidos() {
   return [...$("meses").querySelectorAll("input:checked")].map(c => parseInt(c.value));
 }
 
-const csvCell = t => /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t;
-
 function gerar() {
   $("msg").textContent = "";
   const vet = [...$("dias").querySelectorAll("select")].map(s => parseInt(s.value));
@@ -197,8 +195,7 @@ function gerar() {
 }
 
 function atualizarCsv() {
-  const l = linhasAtuais.map(r => [r[0], r[1], trocas[r[1]] !== undefined ? trocas[r[1]] : r[2]]);
-  csv = "Dia,Data,Organista\n" + l.map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+  linhasFinais = linhasAtuais.map(r => [r[0], r[1], trocas[r[1]] !== undefined ? trocas[r[1]] : r[2]]);
   const n = Object.keys(trocas).filter(k => linhasAtuais.some(r => r[1] === k)).length;
   $("limpar").style.display = n ? "" : "none";
   $("limpar").textContent = "Limpar trocas (" + n + ")";
@@ -233,11 +230,104 @@ function renderizar() {
 
 function erro(t) { $("msg").textContent = t; }
 
+// ---------- geração do .xlsx (sem bibliotecas) ----------
+const esc = t => String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+
+const CRC_TAB = (() => {
+  const t = new Uint32Array(256);
+  for (let n = 0; n < 256; n++) { let c = n; for (let k = 0; k < 8; k++) c = c & 1 ? 0xEDB88320 ^ (c >>> 1) : c >>> 1; t[n] = c >>> 0; }
+  return t;
+})();
+function crc32(b) { let c = 0xFFFFFFFF; for (let i = 0; i < b.length; i++) c = CRC_TAB[(c ^ b[i]) & 255] ^ (c >>> 8); return (c ^ 0xFFFFFFFF) >>> 0; }
+
+// zip sem compressão (suficiente para um xlsx pequeno)
+function zip(arquivos) {
+  const enc = new TextEncoder();
+  const partes = [], central = [];
+  let off = 0;
+  arquivos.forEach(([nome, conteudo]) => {
+    const n = enc.encode(nome), d = enc.encode(conteudo), crc = crc32(d);
+    const lh = new DataView(new ArrayBuffer(30));
+    lh.setUint32(0, 0x04034b50, true); lh.setUint16(4, 20, true); lh.setUint16(6, 0x0800, true);
+    lh.setUint16(8, 0, true); lh.setUint16(10, 0, true); lh.setUint16(12, 0x21, true);
+    lh.setUint32(14, crc, true); lh.setUint32(18, d.length, true); lh.setUint32(22, d.length, true);
+    lh.setUint16(26, n.length, true); lh.setUint16(28, 0, true);
+    partes.push(new Uint8Array(lh.buffer), n, d);
+    const ch = new DataView(new ArrayBuffer(46));
+    ch.setUint32(0, 0x02014b50, true); ch.setUint16(4, 20, true); ch.setUint16(6, 20, true);
+    ch.setUint16(8, 0x0800, true); ch.setUint16(10, 0, true); ch.setUint16(12, 0, true); ch.setUint16(14, 0x21, true);
+    ch.setUint32(16, crc, true); ch.setUint32(20, d.length, true); ch.setUint32(24, d.length, true);
+    ch.setUint16(28, n.length, true); ch.setUint32(42, off, true);
+    central.push(new Uint8Array(ch.buffer), n);
+    off += 30 + n.length + d.length;
+  });
+  const tamCentral = central.reduce((a, x) => a + x.length, 0);
+  const eo = new DataView(new ArrayBuffer(22));
+  eo.setUint32(0, 0x06054b50, true); eo.setUint16(8, arquivos.length, true); eo.setUint16(10, arquivos.length, true);
+  eo.setUint32(12, tamCentral, true); eo.setUint32(16, off, true);
+  const todos = [...partes, ...central, new Uint8Array(eo.buffer)];
+  const out = new Uint8Array(todos.reduce((a, x) => a + x.length, 0));
+  let p = 0; todos.forEach(x => { out.set(x, p); p += x.length; });
+  return out;
+}
+
+function montarXlsx(linhas) {
+  const cab = ["Dia", "Data", "Organista"];
+  // largura das colunas = maior texto de cada coluna + folga, para nada ficar cortado
+  const larg = cab.map((c, i) => {
+    const m = Math.max(c.length, ...linhas.map(l => String(l[i]).length));
+    return Math.max(i === 2 ? 22 : 12, Math.ceil(m * 1.25) + 6);
+  });
+  // estilos: 1 = cabeçalho | 2/3 = linha branca (centro/esquerda) | 4/5 = linha cinza (centro/esquerda)
+  const cel = (ref, txt, st) => '<c r="' + ref + '" t="inlineStr" s="' + st + '"><is><t>' + esc(txt) + '</t></is></c>';
+  let rows = '<row r="1" ht="26" customHeight="1">' + cab.map((c, i) => cel("ABC"[i] + "1", c, 1)).join("") + '</row>';
+  linhas.forEach((l, k) => {
+    const r = k + 2, cinza = k % 2 === 1;
+    rows += '<row r="' + r + '" ht="20" customHeight="1">' + l.map((v, i) =>
+      cel("ABC"[i] + r, v, (cinza ? 4 : 2) + (i === 2 ? 1 : 0))).join("") + '</row>';
+  });
+  const ult = linhas.length + 1;
+  const sheet = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<sheetViews><sheetView workbookViewId="0" showGridLines="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' +
+    '<sheetFormatPr defaultRowHeight="20"/>' +
+    '<cols>' + larg.map((w, i) => '<col min="' + (i + 1) + '" max="' + (i + 1) + '" width="' + w + '" customWidth="1"/>').join("") + '</cols>' +
+    '<sheetData>' + rows + '</sheetData>' +
+    '<autoFilter ref="A1:C' + ult + '"/>' +
+    '<pageMargins left="0.7" right="0.7" top="0.75" bottom="0.75" header="0.3" footer="0.3"/>' +
+    '<pageSetup orientation="portrait" fitToHeight="0"/>' +
+    '</worksheet>';
+
+  const borda = '<border><left style="thin"><color rgb="FFD9D9D9"/></left><right style="thin"><color rgb="FFD9D9D9"/></right><top style="thin"><color rgb="FFD9D9D9"/></top><bottom style="thin"><color rgb="FFD9D9D9"/></bottom><diagonal/></border>';
+  const xf = (fill, font, h) => '<xf numFmtId="0" fontId="' + font + '" fillId="' + fill + '" borderId="1" xfId="0" applyFont="1" applyFill="1" applyBorder="1" applyAlignment="1"><alignment horizontal="' + h + '" vertical="center"' + (h === "left" ? ' indent="1"' : "") + '/></xf>';
+  const styles = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+    '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+    '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font><font><b/><sz val="12"/><color rgb="FFFFFFFF"/><name val="Calibri"/></font></fonts>' +
+    '<fills count="5"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FF3F6F5C"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFFFFFFF"/><bgColor indexed="64"/></patternFill></fill>' +
+    '<fill><patternFill patternType="solid"><fgColor rgb="FFEDEDED"/><bgColor indexed="64"/></patternFill></fill></fills>' +
+    '<borders count="2"><border><left/><right/><top/><bottom/><diagonal/></border>' + borda + '</borders>' +
+    '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+    '<cellXfs count="6"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+    xf(2, 1, "center") + xf(3, 0, "center") + xf(3, 0, "left") + xf(4, 0, "center") + xf(4, 0, "left") + '</cellXfs>' +
+    '<cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles></styleSheet>';
+
+  const X = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>';
+  return zip([
+    ["[Content_Types].xml", X + '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>'],
+    ["_rels/.rels", X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>'],
+    ["xl/workbook.xml", X + '<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Rodízio" sheetId="1" r:id="rId1"/></sheets></workbook>'],
+    ["xl/_rels/workbook.xml.rels", X + '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>'],
+    ["xl/styles.xml", styles],
+    ["xl/worksheets/sheet1.xml", sheet]
+  ]);
+}
+
 async function baixar() {
-  if (!csv) return;
-  const dados = "\uFEFF" + csv; // BOM para o Excel abrir os acentos corretamente
-  const ano = $("ano").value;
-  const nome = "rodizio-" + ano + ".csv";
+  if (!linhasFinais.length) return;
+  const dados = montarXlsx(linhasFinais);
+  const nome = "rodizio-" + $("ano").value + ".xlsx";
   try {
     const dl = window.claude && await window.claude.use("downloads");
     if (dl) { await dl.save({ filename: nome, data: dados }); return; }
@@ -245,7 +335,7 @@ async function baixar() {
     if (e && e.code === "declined") return;
   }
   // alternativa quando a página é aberta como arquivo local
-  const url = URL.createObjectURL(new Blob([dados], { type: "text/csv;charset=utf-8" }));
+  const url = URL.createObjectURL(new Blob([dados], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }));
   const a = document.createElement("a");
   a.href = url; a.download = nome;
   document.body.append(a); a.click(); a.remove();
