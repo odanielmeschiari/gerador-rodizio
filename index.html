@@ -150,21 +150,24 @@ function gerar() {
   if (!nomes.length) return erro("Informe ao menos uma organista.");
   if (!ano || ano < 1) return erro("Informe um ano válido.");
 
+  if (new Set(vet).size !== vet.length) return erro("Há dias da semana repetidos. Escolha dias diferentes.");
+
   const org = nomes.length;
   const passo = Math.max(1, Math.floor(org / dias));
   const max = bissexto(ano) ? 366 : 365;
   const linhas = [];
-  let dia = 0, fim = false;
 
-  while (!fim && dia <= max) {
-    for (let i = 0; i < org && !fim; i++) {
-      for (let j = 0; j < dias; j++) {
-        dia++;
-        while (diaAtual(dia, ano) !== vet[j]) dia++;
-        if (dia > max) { fim = true; break; }
-        linhas.push([NOMES[vet[j]], dataDoDia(dia, ano), nomes[mod(i - passo * j, org)]]);
-      }
-    }
+  // a "semana" do rodízio começa na primeira ocorrência do Dia 1 no ano;
+  // percorre o calendário em ordem e usa todo dia que esteja entre os escolhidos.
+  // A posição do dia na lista (j) define o deslocamento dele no rodízio.
+  let d0 = 1;
+  while (d0 <= max && diaAtual(d0, ano) !== vet[0]) d0++;
+
+  for (let dia = d0; dia <= max; dia++) {
+    const j = vet.indexOf(diaAtual(dia, ano));
+    if (j < 0) continue;
+    const semana = Math.floor((dia - d0) / 7);
+    linhas.push([NOMES[vet[j]], dataDoDia(dia, ano), nomes[mod(semana - passo * j, org)]]);
   }
 
   // o rodízio é calculado para o ano todo e depois filtrado,
