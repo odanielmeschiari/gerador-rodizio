@@ -157,13 +157,15 @@ function gerar() {
   const max = bissexto(ano) ? 366 : 365;
   const linhas = [];
 
-  // a "semana" do rodízio começa na primeira ocorrência do Dia 1 no ano;
-  // percorre o calendário em ordem e usa todo dia que esteja entre os escolhidos.
+  // o ciclo (a "semana" do rodízio) começa no Dia 1 da lista e dura 7 dias.
+  // d0 é a primeira ocorrência do Dia 1 no ano; os dias de 1º de janeiro até d0-1
+  // pertencem ao ciclo anterior (semana = -1), então nenhuma data é perdida
+  // e a ordem dos dias escolhidos não altera quais datas aparecem na planilha.
   // A posição do dia na lista (j) define o deslocamento dele no rodízio.
   let d0 = 1;
   while (d0 <= max && diaAtual(d0, ano) !== vet[0]) d0++;
 
-  for (let dia = d0; dia <= max; dia++) {
+  for (let dia = 1; dia <= max; dia++) {
     const j = vet.indexOf(diaAtual(dia, ano));
     if (j < 0) continue;
     const semana = Math.floor((dia - d0) / 7);
