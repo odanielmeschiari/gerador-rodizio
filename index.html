@@ -34,6 +34,11 @@ button:disabled{opacity:.45;cursor:not-allowed}
 table{border-collapse:collapse;width:100%}
 th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
 th{position:sticky;top:0;background:var(--card)}
+td select{width:auto;min-width:140px;padding:5px 8px}
+tr.troc td{background:#fff6d6}
+.prevbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.prevbar .hint{margin:0}
+button.peq{padding:6px 12px;font-size:.9rem}
 </style>
 </head>
 <body>
@@ -74,6 +79,7 @@ th{position:sticky;top:0;background:var(--card)}
 <div id="msg" class="err" role="alert"></div>
 
 <div class="card" id="prev" style="display:none;margin-top:16px">
+  <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
   <div class="wrap"><table><thead><tr><th>Dia</th><th>Data</th><th>Organista</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
 </main>
@@ -81,6 +87,9 @@ th{position:sticky;top:0;background:var(--card)}
 <script>
 const NOMES = ["DOM","SEG","TER","QUA","QUI","SEX","SAB"];
 let csv = "";
+let linhasAtuais = [];   // linhas geradas pelo rodízio (sem trocas)
+let nomesAtuais = [];
+const trocas = {};       // data -> organista escolhida manualmente
 
 const $ = id => document.getElementById(id);
 const mod = (a, n) => ((a % n) + n) % n;
@@ -180,15 +189,44 @@ function gerar() {
   linhas.length = 0;
   linhas.push(...linhasFiltradas);
 
-  csv = "Dia,Data,Organista\n" + linhas.map(l => l.map(csvCell).join(",")).join("\n") + "\n";
+  // descarta trocas de organistas que não estão mais na lista
+  Object.keys(trocas).forEach(k => { if (!nomes.includes(trocas[k])) delete trocas[k]; });
+  linhasAtuais = linhas;
+  nomesAtuais = nomes;
+  renderizar();
+}
 
+function atualizarCsv() {
+  const l = linhasAtuais.map(r => [r[0], r[1], trocas[r[1]] !== undefined ? trocas[r[1]] : r[2]]);
+  csv = "Dia,Data,Organista\n" + l.map(r => r.map(csvCell).join(",")).join("\n") + "\n";
+  const n = Object.keys(trocas).filter(k => linhasAtuais.some(r => r[1] === k)).length;
+  $("limpar").style.display = n ? "" : "none";
+  $("limpar").textContent = "Limpar trocas (" + n + ")";
+}
+
+function renderizar() {
   const tb = $("tb");
   tb.innerHTML = "";
-  linhas.forEach(l => {
+  linhasAtuais.forEach(l => {
     const tr = document.createElement("tr");
-    l.forEach(c => { const td = document.createElement("td"); td.textContent = c; tr.append(td); });
+    const [dia, data, base] = l;
+    [dia, data].forEach(c => { const td = document.createElement("td"); td.textContent = c; tr.append(td); });
+    const td = document.createElement("td");
+    const sel = document.createElement("select");
+    sel.setAttribute("aria-label", "Organista de " + dia + " " + data);
+    nomesAtuais.forEach(n => sel.add(new Option(n, n)));
+    sel.value = trocas[data] !== undefined ? trocas[data] : base;
+    tr.classList.toggle("troc", sel.value !== base);
+    sel.addEventListener("change", () => {
+      if (sel.value === base) delete trocas[data]; else trocas[data] = sel.value;
+      tr.classList.toggle("troc", sel.value !== base);
+      atualizarCsv();
+    });
+    td.append(sel);
+    tr.append(td);
     tb.append(tr);
   });
+  atualizarCsv();
   $("prev").style.display = "block";
   $("baixar").disabled = false;
 }
@@ -222,6 +260,10 @@ montarMeses();
 $("nd").addEventListener("input", montarSelects);
 $("gerar").addEventListener("click", gerar);
 $("baixar").addEventListener("click", baixar);
+$("limpar").addEventListener("click", () => {
+  Object.keys(trocas).forEach(k => delete trocas[k]);
+  renderizar();
+});
 montarSelects();
 </script>
 </body>
