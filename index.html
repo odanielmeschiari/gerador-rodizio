@@ -10,6 +10,7 @@
 <link rel="stylesheet" href="css/exclusao.css">
 <link rel="stylesheet" href="css/botoes.css">
 <link rel="stylesheet" href="css/previa.css">
+<link rel="stylesheet" href="css/relatorio.css">
 </head>
 <body>
 <main>
@@ -55,6 +56,7 @@
 <div id="msg" class="err" role="alert"></div>
 
 <div class="card" id="prev" style="display:none;margin-top:16px">
+  <div class="rel" id="rel"></div>
   <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
   <div class="wrap"><table><thead><tr><th>Dia</th><th>Data</th><th>Organista</th></tr></thead><tbody id="tb"></tbody></table></div>
   <h2 class="tit">Resumo por organista</h2>
@@ -68,12 +70,15 @@
 <script src="js/utils.js"></script>
 <script src="js/calendario.js"></script>
 <script src="js/estado.js"></script>
+<script src="js/rodizio-analise.js"></script>
+<script src="js/rodizio-busca.js"></script>
 <script src="js/rodizio.js"></script>
 <script src="js/ui-dias.js"></script>
 <script src="js/ui-organistas.js"></script>
 <script src="js/ui-meses.js"></script>
 <script src="js/ui-exclusao.js"></script>
 <script src="js/previa.js"></script>
+<script src="js/relatorio.js"></script>
 <script src="js/controlador.js"></script>
 <script src="js/zip.js"></script>
 <script src="js/xlsx.js"></script>

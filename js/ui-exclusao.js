@@ -32,7 +32,7 @@ function montarExclusao() {
     atualizarInfoExclusao();
     return;
   }
-  $("exclHint").textContent = "Clique nos dias de culto que não terão rodízio (feriados, eventos...). Valem na próxima geração.";
+  $("exclHint").textContent = "Clique nos dias de culto que não terão rodízio (ex.: batismos).";
 
   meses.forEach(m => {
     const box = document.createElement("div");

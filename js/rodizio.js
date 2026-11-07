@@ -1,104 +1,132 @@
-/* Regra do rodízio (lógica pura: não lê nem altera a tela) */
+/* Algoritmo de rodízio (Especificação 1.0), parte 3: fluxo geral (seção 8) e relatório final (seção 7).
+   Lógica pura: não lê nem altera a tela. Veja rodizio-analise.js e rodizio-busca.js. */
 
-// Ajustes da escolha da organista de cada data (custos em "dias de espera"):
-//  - PESO_QUEBRA: custo de pular um passo da sequência da organista. É alto: a ordem
-//    só é quebrada quando ninguém está na vez daquele dia (ex.: todas as datas daquele
-//    dia foram excluídas) ou quando a organista da vez tocaria cedo demais.
-//  - PESO_CEDO: custo, por dia, de tocar antes do limite de "cedo demais".
-//  - FRACAO_CEDO: "cedo demais" = menos que essa fração do intervalo médio entre as
-//    jogadas dela (e nunca menos que o menor intervalo do rodízio normal).
-const PESO_QUEBRA = 100;
-const PESO_CEDO = 20;
-const FRACAO_CEDO = 0.5;
+const CLASSIFICACAO = { 1: "perfeita", 2: "imperfeita", 3: "contingência" };
 
-// Em quantas semanas (a partir da primeira) cada dia da lista é deslocado no ciclo.
-// A organista p toca o dia j na semana s quando (s - desloc[j]) % n == p.
-// Com isso cada data tem exatamente uma organista, e cada uma percorre os dias
-// sempre na mesma ordem.
-//   vet = dias da semana escolhidos, em ordem crescente (0 = DOM ... 6 = SAB)
-//   n   = quantidade de organistas
-function deslocamentos(vet, n) {
-  const k = vet.length;
-  // poucas organistas para muitos dias: elas se alternam dia a dia
-  if (n < k) return vet.map((_, j) => j);
-
-  // g[j] = dias entre o dia j e o seguinte da lista (o último volta ao primeiro)
-  const g = vet.map((v, j) => j < k - 1 ? vet[j + 1] - v : 7 - (vet[k - 1] - vet[0]));
-  // reparte as n-1 semanas extras do ciclo entre os trechos, sempre no trecho
-  // mais curto, para os intervalos ficarem o mais parecidos possível
-  const m = Array(k).fill(0);
-  for (let x = 0; x < n - 1; x++) {
-    let menor = 0;
-    for (let j = 1; j < k; j++) if (g[j] + 7 * m[j] < g[menor] + 7 * m[menor]) menor = j;
-    m[menor]++;
-  }
-  const desloc = [0];
-  for (let j = 1; j < k; j++) desloc.push(desloc[j - 1] + m[j - 1]);
-  return desloc;
+// Organistas em ordem alfabética (desempate da seção 4); nomes iguais mantêm a ordem informada.
+function ordenarNomes(nomes) {
+  const col = typeof Intl !== "undefined" ? new Intl.Collator("pt-BR", { sensitivity: "base" }) : null;
+  const cmp = col ? (a, b) => col.compare(a, b) : (a, b) => (a < b ? -1 : a > b ? 1 : 0);
+  return nomes.map((n, i) => [n, i]).sort((x, y) => cmp(x[0], y[0]) || x[1] - y[1]).map(x => x[0]);
 }
 
-// Gera as linhas [dia, data, organista] do ano inteiro, data por data.
-//   vet       = dias da semana escolhidos, em ordem crescente
-//   nomes     = organistas na ordem informada
+// Gera o rodízio do ano inteiro, data por data.
+//   vet       = dias da semana escolhidos (0 = DOM ... 6 = SAB)
+//   nomes     = organistas
 //   excluidos = Set de datas "dd/mm/aaaa" sem culto (não entram no rodízio)
-//
-// Cada organista tem um estado: a sequência fixa de dias dela (ex.: DOM, SEG, QUI),
-// em que ponto dessa sequência está e quando tocou pela última vez. O estado inicial
-// vem do rodízio ideal "sem exclusões", como se ele já estivesse rodando antes de 1º de janeiro.
-// Para cada data, só concorrem as organistas que estão "na vez" daquele dia; entre elas
-// toca a que está há mais tempo sem tocar. Uma data excluída não consome a vez de ninguém:
-// a organista continua esperando o mesmo dia da sequência dela, que nunca é embaralhada.
+// Devolve { linhas: [[dia, data, organista], ...], relatorio }.
+function gerarRodizio(vet, nomes, ano, excluidos = new Set()) {
+  // 1. Receber funcionários, dias e período / 2. Listar datas válidas
+  const { dias, datas } = prepararDatas([...vet].sort((a, b) => a - b), ano, excluidos);
+  if (!datas.length || !nomes.length) return { linhas: [], relatorio: null };
+  const ordem = ordenarNomes(nomes);
+  const ctx = { ano, dias, k: dias.length, datas, N: ordem.length };
+
+  // 3. Calcular distribuição inicial / 4. Verificar viabilidade matemática
+  const an = analisarViabilidade(datas, ctx.k);
+
+  let nivel, montagem, busca = null, cont = null;
+  if (ctx.N >= an.nMin) {
+    // 5. Buscar rodízio perfeito (nível 1) / 7. permitindo consecutivos (nível 2): mesma busca exaustiva
+    busca = buscarSequencia(ctx, an);
+    nivel = busca.minConsec === 0 ? 1 : 2;
+    montagem = melhorMontagem(ctx, busca.candidatas, null);
+  } else {
+    // 9. Buscar solução permitindo quebras de sequência (nível 3: contingência)
+    nivel = 3;
+    cont = resolverContingencia(ctx, an);
+    montagem = cont.montagem;
+  }
+
+  const linhas = datas.map((d, t) => [NOMES[d.sem], d.data, ordem[montagem.trab[t]]]);
+  return { linhas, relatorio: montarRelatorio(ctx, an, nivel, montagem, ordem, busca, cont) };
+}
+
+// Compatibilidade: só as linhas do rodízio.
 function calcularRodizio(vet, nomes, ano, excluidos = new Set()) {
-  const k = vet.length, n = nomes.length;
-  const max = bissexto(ano) ? 366 : 365;
-  const desloc = deslocamentos(vet, n);
+  return gerarRodizio(vet, nomes, ano, excluidos).linhas;
+}
 
-  // d0 = primeira ocorrência do 1º dia da lista no ano (início da "semana 0" do ciclo)
-  let d0 = 1;
-  while (diaAtual(d0, ano) !== vet[0]) d0++;
+// Seção 7: relatório final
+function montarRelatorio(ctx, an, nivel, m, ordem, busca, cont) {
+  const { dias, datas, N } = ctx;
+  const dataDe = t => datas[t].data;
 
-  // jogadas do rodízio ideal nas 2 semanas-ciclo anteriores ao ano (e na semana parcial inicial)
-  const hist = nomes.map(() => []);
-  for (let s = -2 * n; s < 0; s++)
-    for (let j = 0; j < k; j++)
-      hist[mod(s - desloc[j], n)].push([d0 + 7 * s + (vet[j] - vet[0]), j]);
+  const distribuicao = dias.map((d, i) => ({
+    dia: NOMES[d], pessoas: ordem.filter((_, p) => m.pos0[p] === i)
+  }));
 
-  // menor intervalo entre duas jogadas da mesma organista no rodízio normal
-  let minimo = Infinity;
-  hist.forEach(P => P.forEach(([dia], x) => { if (x) minimo = Math.min(minimo, dia - P[x - 1][0]); }));
-
-  // abaixo deste intervalo a organista tocaria "cedo demais" (nunca menos que o normal, nem
-  // menos que uma fração do intervalo médio entre as jogadas dela)
-  const limiar = Math.min(minimo, FRACAO_CEDO * 7 * n / k);
-
-  const est = hist.map(P => {
-    let ult = null, i = 0;
-    P.forEach(([dia], x) => { if (dia < 1) { ult = dia; i = x + 1; } });
-    return { ciclo: P.slice(0, k).map(x => x[1]), pos: i % k, ult };
+  const organistas = ordem.map((nome, p) => {
+    const sequencia = [];
+    datas.forEach((d, t) => { if (m.trab[t] === p) sequencia.push(NOMES[d.sem]); });
+    return {
+      nome, vezes: m.vezes[p], sequencia,
+      diasDesdeUltimo: datas[datas.length - 1].dia - m.ult[p],
+      quebras: m.ocorr.quebras.filter(x => x.p === p).length,
+      consecutivos: m.ocorr.consecutivos.filter(x => x.p === p).length
+    };
   });
 
-  const linhas = [];
-  for (let dia = 1; dia <= max; dia++) {
-    const j = vet.indexOf(diaAtual(dia, ano));
-    if (j < 0) continue;
-    const data = dataDoDia(dia, ano);
-    if (excluidos.has(data)) continue;
+  const quebras = m.ocorr.quebras.map(x => ({
+    data: dataDe(x.t), organista: ordem[x.p], esperado: NOMES[x.esperado], real: NOMES[x.real]
+  }));
+  const consecutivos = m.ocorr.consecutivos.map(x => ({
+    data: dataDe(x.t), anterior: dataDe(x.t - 1), organista: ordem[x.p]
+  }));
 
-    let escolhida = 0, menorCusto = Infinity, passos = 0;
-    est.forEach((e, i) => {
-      let p = 0;   // passos que a organista teria de pular na sequência para tocar este dia
-      while (e.ciclo[(e.pos + p) % k] !== j) p++;
-      const espera = dia - e.ult;
-      const custo = p * PESO_QUEBRA - espera + Math.max(0, limiar - espera) * PESO_CEDO;
-      if (custo < menorCusto) { menorCusto = custo; escolhida = i; passos = p; }
-    });
+  const violacoes = [
+    { regra: "Toda data válida com exatamente uma organista", prioridade: "Obrigatória", quantidade: 0 },
+    { regra: "Organista não toca duas vezes na mesma data", prioridade: "Obrigatória", quantidade: 0 },
+    { regra: "Respeitar a sequência individual de dias", prioridade: "Obrigatória, se possível", quantidade: m.quebras },
+    { regra: "Evitar trabalho em datas consecutivas", prioridade: "Obrigatória, se possível", quantidade: m.consec },
+    { regra: "Distribuir trabalhos de maneira equilibrada (diferença entre quem mais e quem menos tocou)", prioridade: "Otimização", quantidade: m.desig },
+    { regra: "Priorizar quem está há mais tempo sem trabalhar (datas em que outra foi escolhida)", prioridade: "Otimização", quantidade: m.desvios },
+    { regra: "Desempatar alfabeticamente", prioridade: "Obrigatória", quantidade: 0 }
+  ];
 
-    const e = est[escolhida];
-    e.pos = (e.pos + passos + 1) % k;
-    e.ult = dia;
-    linhas.push([NOMES[vet[j]], data, nomes[escolhida]]);
+  const porDia = v => dias.map((d, i) => NOMES[d] + " " + v[i]).join(", ");
+  const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
+  const justificativa = [];
+  let comprovado = true;
+
+  if (nivel >= 2) {
+    justificativa.push(
+      N >= an.nMin
+        ? "Há " + plural(N, "organista", "organistas") + " e o mínimo para preencher todas as datas respeitando as sequências é " +
+          an.nMin + " (" + porDia(an.L) + "): as sequências puderam ser respeitadas."
+        : "Há " + plural(N, "organista", "organistas") + ", mas preencher todas as datas respeitando as sequências exige pelo menos " +
+          an.nMin + " (mínimos por dia de início: " + porDia(an.L) + "). Com menos que isso é matematicamente impossível, então foi preciso quebrar sequências."
+    );
   }
-  return linhas;
+  if (nivel === 2) {
+    comprovado = busca.exaustiva;
+    justificativa.push(
+      "Para evitar trabalhos em dias seguidos foram examinadas " + busca.examinadas + " distribuições iniciais" +
+      (busca.exaustiva ? " (todas as combinações possíveis)" : " (busca limitada às mais equilibradas, por haver combinações demais)") +
+      ". Em todas, o calendário só se completa com pelo menos " + plural(busca.minConsec, "trabalho", "trabalhos") +
+      " em dias seguidos; esse é o menor número possível. Ele é inevitável quando, em duas datas seguidas, a única organista na vez do segundo dia é a que acabou de tocar."
+    );
+  }
+  if (nivel === 3) {
+    comprovado = cont.comprovado;
+    justificativa.push(
+      cont.comprovado
+        ? "O mínimo de " + plural(m.quebras, "quebra de sequência", "quebras de sequência") + " e, dentre as soluções com esse mínimo, " +
+          plural(m.consec, "trabalho", "trabalhos") + " em dias seguidos, foi comprovado por programação dinâmica sobre os " +
+          cont.estados + " estados possíveis (busca exaustiva)."
+        : "O número de quebras não foi comprovado como mínimo: o caso é grande demais para a busca exaustiva e foi usada uma solução aproximada."
+    );
+  }
+
+  return {
+    nivel, classificacao: CLASSIFICACAO[nivel], comprovado,
+    totalDatas: datas.length,
+    viabilidade: {
+      dias: dias.map(d => NOMES[d]), ocorrencias: an.C, minimos: an.L, nMin: an.nMin, N,
+      sequenciaViavel: N >= an.nMin
+    },
+    distribuicao, violacoes, quebras, consecutivos, organistas, justificativa
+  };
 }
 
 // Mantém só as linhas dos meses selecionados (1 a 12).

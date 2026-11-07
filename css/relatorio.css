@@ -1,0 +1,17 @@
+/* Relatório do algoritmo: selo de classificação e seções recolhíveis */
+.rel{margin-bottom:18px;padding-bottom:6px;border-bottom:1px solid var(--bd)}
+.rel h2.tit{margin:0}
+.rel p{margin:8px 0}
+.rel p.hint{margin:4px 0 10px}
+.selo{display:inline-block;padding:3px 12px;border-radius:999px;font-weight:700;font-size:.85rem;border:1px solid transparent}
+.selo.n1{background:#d7f0e2;color:#0f4a2f;border-color:#5f8f7d}
+.selo.n2{background:#fff0c2;color:#5c4400;border-color:#c9a227}
+.selo.n3{background:#fbe3e0;color:#7a1c14;border-color:#b3261e}
+.rel details{margin:10px 0}
+.rel summary{cursor:pointer;font-weight:600}
+.rel details>*:not(summary){margin-top:8px}
+.rel ul{margin:8px 0 0;padding-left:20px}
+.rel li{margin-bottom:6px}
+.rel .seq{padding:8px 12px;max-height:240px;overflow-y:auto}
+.rel .seq p{margin:0 0 8px;white-space:normal;overflow-wrap:anywhere}
+.rel td,.rel th{white-space:normal}

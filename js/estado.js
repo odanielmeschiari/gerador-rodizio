@@ -6,3 +6,4 @@ let nomesAtuais = [];
 const trocas = {};       // data -> organista escolhida manualmente
 const excluidos = new Set();   // datas "dd/mm/aaaa" que ficam fora do rodízio
 let diasAtuais = [];           // dias da semana (0 = DOM ...) usados na última geração
+let relatorioAtual = null;       // relatório do algoritmo na última geração (classificação, violações...)

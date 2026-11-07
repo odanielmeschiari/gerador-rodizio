@@ -15,7 +15,8 @@ function gerar() {
   const sel = mesesEscolhidos();
   if (!sel.length) return erro("Selecione ao menos um mês.");
 
-  const linhas = filtrarPorMeses(calcularRodizio(vet, nomes, ano, excluidos), sel);
+  const resultado = gerarRodizio(vet, nomes, ano, excluidos);
+  const linhas = filtrarPorMeses(resultado.linhas, sel);
   if (!linhas.length) return erro("Todos os dias do período foram excluídos.");
 
   // descarta trocas de organistas que não estão mais na lista
@@ -23,5 +24,7 @@ function gerar() {
   diasAtuais = vet;
   linhasAtuais = linhas;
   nomesAtuais = nomes;
+  relatorioAtual = resultado.relatorio;
   renderizar();
+  renderizarRelatorio();
 }
