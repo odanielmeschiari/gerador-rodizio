@@ -56,13 +56,21 @@
 <div id="msg" class="err" role="alert"></div>
 
 <div class="card" id="prev" style="display:none;margin-top:16px">
-  <div class="rel" id="rel"></div>
   <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
   <div class="wrap"><table><thead><tr><th>Dia</th><th>Data</th><th>Organista</th></tr></thead><tbody id="tb"></tbody></table></div>
-  <h2 class="tit">Resumo por organista</h2>
-  <div class="wrap livre"><table><thead><tr><th>Organista</th><th>Vezes</th><th>Por dia</th><th>Intervalo (dias)<br><small>mín / média / máx</small></th><th>Quebras de ordem</th></tr></thead><tbody id="rs"></tbody></table></div>
-  <p class="hint">Quebra de ordem: vez em que a organista tocou um dia diferente do que costuma vir depois do dia anterior dela. Linhas em amarelo têm quebras.</p>
 </div>
+
+<!-- Relatório completo: fica no fim da página, recolhido; cada tópico abre separadamente -->
+<details class="card relatorio" id="relCompleto" style="display:none">
+  <summary>Relatório completo do rodízio</summary>
+  <p class="hint">Abra apenas o tópico que quiser consultar.</p>
+  <div class="rel" id="rel"></div>
+  <details>
+    <summary>Resumo por organista</summary>
+    <div class="wrap livre"><table><thead><tr><th>Organista</th><th>Vezes</th><th>Por dia</th><th>Intervalo (dias)<br><small>mín / média / máx</small></th><th>Quebras de ordem</th></tr></thead><tbody id="rs"></tbody></table></div>
+    <p class="hint">Quebra de ordem: vez em que a organista tocou um dia diferente do que costuma vir depois do dia anterior dela. Linhas em amarelo têm quebras.</p>
+  </details>
+</details>
 </main>
 
 <!-- Ordem importa: cada arquivo usa funções dos anteriores -->

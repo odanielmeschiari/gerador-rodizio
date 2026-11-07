@@ -27,4 +27,5 @@ function gerar() {
   relatorioAtual = resultado.relatorio;
   renderizar();
   renderizarRelatorio();
+  $("relCompleto").style.display = "block";   // seção no fim da página (recolhida por padrão)
 }

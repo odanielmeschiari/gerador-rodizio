@@ -1,5 +1,6 @@
 /* Relatório do algoritmo na tela (seção 7 da especificação): classificação, regras, distribuição inicial,
-   organistas e exceções. Só mostra o que o algoritmo calculou (js/rodizio.js). */
+   organistas e exceções. Só mostra o que o algoritmo calculou (js/rodizio.js).
+   Aparece na seção recolhida "Relatório completo" no fim da página; todos os tópicos começam fechados. */
 
 function nodo(tag, texto, classe) {
   const e = document.createElement(tag);
@@ -60,11 +61,11 @@ function renderizarRelatorio() {
   if (r.justificativa.length) {
     const ul = nodo("ul");
     r.justificativa.forEach(j => ul.append(nodo("li", j)));
-    box.append(secao(r.nivel === 3 ? "Por que há quebras de sequência" : "Por que não é perfeito", ul, true));
+    box.append(secao(r.nivel === 3 ? "Por que há quebras de sequência" : "Por que não é perfeito", ul));
   }
 
   box.append(secao("Regras e violações",
-    tabelaSimples(["Regra", "Prioridade", "Quantidade"], viol.map(v => [v.regra, v.prioridade, v.quantidade])), true));
+    tabelaSimples(["Regra", "Prioridade", "Quantidade"], viol.map(v => [v.regra, v.prioridade, v.quantidade]))));
 
   const dist = r.distribuicao.map(g => [g.dia, g.pessoas.length, g.pessoas.join(", ") || "—"]);
   box.append(secao("Distribuição inicial utilizada (quem começa esperando cada dia)",

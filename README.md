@@ -29,7 +29,7 @@ js/
   ui-meses.js         Período e meses selecionados
   ui-exclusao.js      Mini-calendário para excluir dias do rodízio
   previa.js           Tabela de prévia, trocas manuais e resumo por organista
-  relatorio.js        Relatório do algoritmo na tela (classificação, violações, justificativa)
+  relatorio.js        Relatório do algoritmo na tela (classificação, violações, justificativa); fica na seção recolhida "Relatório completo", no fim da página, junto com o resumo por organista (cada tópico abre separadamente)
   controlador.js      Valida o formulário e orquestra a geração (gerar)
   zip.js              CRC32 e empacotador ZIP sem compressão
   xlsx.js             Montagem do .xlsx (planilha, estilos, pacote)
