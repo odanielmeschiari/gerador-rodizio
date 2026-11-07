@@ -1,0 +1,17 @@
+/* Cartões, campos, dias da semana, meses e lista de organistas */
+.card{background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:16px;margin-bottom:16px}
+label{display:block;font-weight:600;margin-bottom:6px}
+input,select,textarea{width:100%;padding:9px 10px;border:1px solid var(--bd);border-radius:8px;background:var(--bg);color:var(--tx);font:inherit}
+textarea{min-height:120px;resize:vertical}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dias{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px 10px;margin-top:6px}
+.meses{display:none;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:6px 10px;margin-top:12px}
+.meses label{display:flex;align-items:center;gap:6px;font-weight:400;margin:0;cursor:pointer}
+.meses input{width:auto;margin:0}
+.dias label{display:flex;align-items:center;gap:6px;font-weight:400;margin:0;cursor:pointer}
+.dias input{width:auto;margin:0}
+.orgs{display:flex;flex-direction:column;gap:8px}
+.orgs .lin{display:flex;gap:8px;align-items:center}
+.orgs .rem{flex:none;min-width:40px;line-height:1}
+.mais{margin-top:8px;min-width:40px;font-size:1.1rem;line-height:1}
+.hint{color:var(--mut);font-size:.85rem;margin:6px 0 0}

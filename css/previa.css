@@ -1,0 +1,10 @@
+/* Tabela de prévia do rodízio e destaque das trocas */
+.wrap{overflow-x:auto;max-height:420px;overflow-y:auto;border:1px solid var(--bd);border-radius:8px}
+table{border-collapse:collapse;width:100%}
+th,td{padding:7px 12px;text-align:left;border-bottom:1px solid var(--bd);white-space:nowrap}
+th{position:sticky;top:0;background:var(--card)}
+td select{width:auto;min-width:140px;padding:5px 8px}
+tr.troc td{background:#fff6d6}
+.prevbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.prevbar .hint{margin:0}
+button.peq{padding:6px 12px;font-size:.9rem}

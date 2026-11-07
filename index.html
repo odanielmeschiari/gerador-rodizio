@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Rodízio Automático: Organistas CCB</title>
+<link rel="stylesheet" href="css/variaveis.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/formulario.css">
+<link rel="stylesheet" href="css/botoes.css">
+<link rel="stylesheet" href="css/previa.css">
+</head>
+<body>
+<main>
+<img class="logo" src="assets/logo.png" alt="Logo da Congregação Cristã no Brasil" width="320" height="162">
+<h1>Rodízio Automático: Organistas CCB</h1>
+<p class="sub">Marque os dias de culto, informe as organistas e o ano para gerar a planilha.</p>
+
+<div class="card">
+  <label for="ano">Ano</label>
+  <input id="ano" type="number" min="1" value="2026">
+  <label style="margin-top:14px">Dias de culto</label>
+  <div class="dias" id="dias"></div>
+</div>
+
+<div class="card">
+  <label for="per">Período a gerar</label>
+  <select id="per">
+    <option value="ano">Ano todo</option>
+    <option value="s1">1º semestre (jan a jun)</option>
+    <option value="s2">2º semestre (jul a dez)</option>
+    <option value="custom">Escolher meses</option>
+  </select>
+  <div class="meses" id="meses"></div>
+</div>
+
+<div class="card">
+  <label for="org1" id="orgLabel">Organistas</label>
+  <div class="orgs" id="orgs"></div>
+  <button type="button" id="addOrg" class="sec peq mais" aria-label="Adicionar organista" title="Adicionar organista">+</button>
+</div>
+
+<div class="btns">
+  <button id="gerar">Gerar rodízio</button>
+  <button id="baixar" class="sec" disabled>Download do rodízio</button>
+</div>
+<div id="msg" class="err" role="alert"></div>
+
+<div class="card" id="prev" style="display:none;margin-top:16px">
+  <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
+  <div class="wrap"><table><thead><tr><th>Dia</th><th>Data</th><th>Organista</th></tr></thead><tbody id="tb"></tbody></table></div>
+</div>
+</main>
+
+<!-- Ordem importa: cada arquivo usa funções dos anteriores -->
+<script src="js/config.js"></script>
+<script src="js/utils.js"></script>
+<script src="js/calendario.js"></script>
+<script src="js/estado.js"></script>
+<script src="js/rodizio.js"></script>
+<script src="js/ui-dias.js"></script>
+<script src="js/ui-organistas.js"></script>
+<script src="js/ui-meses.js"></script>
+<script src="js/previa.js"></script>
+<script src="js/controlador.js"></script>
+<script src="js/zip.js"></script>
+<script src="js/xlsx.js"></script>
+<script src="js/download.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>

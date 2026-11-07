@@ -1,0 +1,25 @@
+/* Controlador: lê o formulário, valida, chama o rodízio e atualiza a prévia */
+
+function erro(t) { $("msg").textContent = t; }
+
+function gerar() {
+  $("msg").textContent = "";
+  const vet = diasEscolhidos();
+  const nomes = nomesDigitados();
+  const ano = parseInt($("ano").value);
+
+  if (!vet.length) return erro("Marque ao menos um dia de culto.");
+  if (!nomes.length) return erro("Informe ao menos uma organista.");
+  if (!ano || ano < 1) return erro("Informe um ano válido.");
+
+  const sel = mesesEscolhidos();
+  if (!sel.length) return erro("Selecione ao menos um mês.");
+
+  const linhas = filtrarPorMeses(calcularRodizio(vet, nomes, ano), sel);
+
+  // descarta trocas de organistas que não estão mais na lista
+  Object.keys(trocas).forEach(k => { if (!nomes.includes(trocas[k])) delete trocas[k]; });
+  linhasAtuais = linhas;
+  nomesAtuais = nomes;
+  renderizar();
+}
