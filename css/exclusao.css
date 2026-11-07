@@ -1,0 +1,9 @@
+/* Mini-calendário de dias excluídos */
+.cal{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-top:10px}
+.cal .mes h4{margin:0 0 6px;font-size:.95rem}
+.cal .grade{display:grid;grid-template-columns:repeat(7,1fr);gap:3px}
+.cal .sem{font-size:.7rem;color:var(--mut);text-align:center}
+.cal .dc{display:flex;align-items:center;justify-content:center;min-height:30px;padding:0;border-radius:6px;font-size:.85rem;font-weight:400;line-height:1}
+.cal span.dc.off{color:var(--bd)}
+.cal button.dc{border:1px solid var(--bd);background:var(--bg);color:var(--tx)}
+.cal button.dc.excl{background:#fbe3e0;border-color:#b3261e;color:#b3261e;font-weight:600;text-decoration:line-through}

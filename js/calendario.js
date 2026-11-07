@@ -14,3 +14,21 @@ function dataDoDia(dia, ano) {
   while (mes < 11 && dia > meses[mes]) { dia -= meses[mes]; mes++; }
   return String(dia).padStart(2,"0") + "/" + String(mes+1).padStart(2,"0") + "/" + ano;
 }
+
+const diasDoMes = (mes, ano) => [31, bissexto(ano) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][mes - 1];
+
+// número do dia dentro do ano (1 = 1º de janeiro)
+function diaDoAno(dia, mes, ano) {
+  let n = dia;
+  for (let m = 1; m < mes; m++) n += diasDoMes(m, ano);
+  return n;
+}
+
+const formatarData = (dia, mes, ano) =>
+  String(dia).padStart(2, "0") + "/" + String(mes).padStart(2, "0") + "/" + ano;
+
+// "dd/mm/aaaa" -> nº de dias corridos (serve para medir intervalos entre datas)
+function diasCorridos(data) {
+  const [d, m, a] = data.split("/").map(Number);
+  return Date.UTC(a, m - 1, d) / 86400000;
+}

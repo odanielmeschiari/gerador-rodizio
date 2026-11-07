@@ -8,3 +8,6 @@ tr.troc td{background:#fff6d6}
 .prevbar{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
 .prevbar .hint{margin:0}
 button.peq{padding:6px 12px;font-size:.9rem}
+tr.alerta td{background:#fff6d6}
+h2.tit{font-size:1.05rem;margin:18px 0 8px}
+.wrap.livre{max-height:none}

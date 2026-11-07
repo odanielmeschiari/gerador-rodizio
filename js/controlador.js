@@ -15,10 +15,12 @@ function gerar() {
   const sel = mesesEscolhidos();
   if (!sel.length) return erro("Selecione ao menos um mês.");
 
-  const linhas = filtrarPorMeses(calcularRodizio(vet, nomes, ano), sel);
+  const linhas = filtrarPorMeses(calcularRodizio(vet, nomes, ano, excluidos), sel);
+  if (!linhas.length) return erro("Todos os dias do período foram excluídos.");
 
   // descarta trocas de organistas que não estão mais na lista
   Object.keys(trocas).forEach(k => { if (!nomes.includes(trocas[k])) delete trocas[k]; });
+  diasAtuais = vet;
   linhasAtuais = linhas;
   nomesAtuais = nomes;
   renderizar();
