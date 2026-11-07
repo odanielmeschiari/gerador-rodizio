@@ -1,7 +1,10 @@
 /* Verificação do algoritmo (Especificação 1.0). Uso: node tests/verificacao.js
+   Regras (em ordem de prioridade): fundamental = nenhuma organista em dois cultos seguidos (datas vizinhas
+   da escala, não importa quantos dias as separem); 1) sem quebras de sequência; 2) maior tempo entre
+   trabalhos; 3) trabalhos igualmente divididos.
    1) Força bruta: em casos pequenos testa TODAS as combinações (posição inicial de cada organista e
-      quem toca em cada data) e confere se a classificação e os mínimos de quebras/consecutivos que o
-      algoritmo declara são realmente os melhores possíveis.
+      quem toca em cada data) e confere se os mínimos de consecutivos e, depois, de quebras que o
+      algoritmo declara são realmente os melhores possíveis (nessa ordem).
    2) Auditoria: refaz a contagem de quebras e consecutivos a partir do rodízio pronto e confere o relatório.
    3) Invariantes: toda data com exatamente uma organista, nomes válidos, relatório coerente.
    Sai com código 1 se algo falhar. */
@@ -18,6 +21,7 @@ const sorteio = n => Math.floor(rnd() * n);
 let falhas = 0;
 const falhar = (msg, info) => { falhas++; if (falhas <= 15) console.log("FALHA:", msg, JSON.stringify(info)); };
 
+const viol = (rel, id) => rel.violacoes.find(v => v.id === id).quantidade;
 const nomesDe = N => Array.from({ length: N }, (_, i) => String.fromCharCode(65 + i));
 
 // chama o algoritmo
@@ -27,7 +31,7 @@ function gerar(vet, nomes, excl, ano = ANO) {
 }
 
 // ---------------------------------------------------------------------------------------------
-// Auditoria independente: refaz quebras e consecutivos a partir das linhas e da distribuição inicial.
+// Auditoria independente: refaz quebras e consecutivos (cultos seguidos) a partir das linhas e da distribuição inicial.
 function auditar(res, vet, nomes) {
   const rel = res.relatorio;
   const dias = rel.viabilidade.dias;                          // ex.: ["DOM","QUA"]
@@ -43,29 +47,29 @@ function auditar(res, vet, nomes) {
     if (pos[nome] === undefined) throw new Error("organista desconhecida " + nome);
     if (pos[nome] !== j) quebras++;
     pos[nome] = (j + 1) % k;                                   // próximo dia a partir do dia efetivamente trabalhado
-    const dc = run(`diasCorridos("${data}")`);
-    if (anterior && anterior.nome === nome && dc - anterior.dc === 1) consec++;
-    anterior = { nome, dc };
+    if (anterior === nome) consec++;                           // dois cultos seguidos da lista, qualquer que seja o intervalo em dias
+    anterior = nome;
   });
   return { quebras, consec, cont };
 }
 
 // ---------------------------------------------------------------------------------------------
-// Força bruta: menor (quebras, consecutivos) entre TODAS as posições iniciais e TODAS as escolhas.
+// Força bruta: menor (consecutivos, quebras), nessa ordem, entre TODAS as posições iniciais e TODAS as escolhas.
+// Devolve [consecutivos, quebras].
 function forcaBruta(dias, datas, N) {
   const k = dias.length, D = datas.length;
   let melhor = [Infinity, Infinity];
   const menor = (a, b) => a[0] < b[0] || (a[0] === b[0] && a[1] < b[1]);
   const pos = Array(N).fill(0);
-  function dfs(t, ultimo, q, c) {
-    if (q > melhor[0] || (q === melhor[0] && c >= melhor[1])) return;   // poda
-    if (t === D) { if (menor([q, c], melhor)) melhor = [q, c]; return; }
+  function dfs(t, ultimo, c, q) {
+    if (c > melhor[0] || (c === melhor[0] && q >= melhor[1])) return;   // poda
+    if (t === D) { if (menor([c, q], melhor)) melhor = [c, q]; return; }
     const d = datas[t];
     for (let p = 0; p < N; p++) {
       const guardada = pos[p];
-      const nq = q + (pos[p] !== d.j ? 1 : 0), nc = c + (d.adj && ultimo === p ? 1 : 0);
+      const nq = q + (pos[p] !== d.j ? 1 : 0), nc = c + (ultimo === p ? 1 : 0);
       pos[p] = (d.j + 1) % k;
-      dfs(t + 1, p, nq, nc);
+      dfs(t + 1, p, nc, nq);
       pos[p] = guardada;
     }
   }
@@ -105,14 +109,11 @@ function testarForcaBruta(casos) {
     // datas na forma usada pela força bruta
     ctx.__r = res.linhas.map(l => l[1]);
     const dias = rel.viabilidade.dias.map(n => run(`NOMES.indexOf("${n}")`));
-    const datas = res.linhas.map(([dia, data], t) => ({
-      j: dias.indexOf(run(`NOMES.indexOf("${dia}")`)),
-      adj: t > 0 && run(`diasCorridos("${data}") - diasCorridos("${res.linhas[t - 1][1]}")`) === 1
-    }));
-    const bruta = forcaBruta(dias, datas, c.N);
-    const q = rel.violacoes[2].quantidade, cs = rel.violacoes[3].quantidade;
-    const nivelBruta = bruta[0] > 0 ? 3 : bruta[1] > 0 ? 2 : 1;
-    if (bruta[0] !== q || bruta[1] !== cs) falhar("custo difere da força bruta", { c, motor: [q, cs], bruta });
+    const datas = res.linhas.map(([dia]) => ({ j: dias.indexOf(run(`NOMES.indexOf("${dia}")`)) }));
+    const bruta = forcaBruta(dias, datas, c.N);                  // [consecutivos, quebras]
+    const q = viol(rel, "sequencia"), cs = viol(rel, "consecutivos");
+    const nivelBruta = bruta[1] > 0 ? 3 : bruta[0] > 0 ? 2 : 1;
+    if (bruta[0] !== cs || bruta[1] !== q) falhar("custo difere da força bruta", { c, motor: [cs, q], bruta });
     if (nivelBruta !== rel.nivel) falhar("nível difere da força bruta", { c, motor: rel.nivel, bruta: nivelBruta });
     const aud = auditar(res, c.vet, nomesDe(c.N));
     if (aud.quebras !== q || aud.consec !== cs) falhar("auditoria difere do relatório", { c, aud, q, cs });
@@ -146,12 +147,14 @@ function testarAno(comExcl, maxN = 8) {
       if (res.linhas.some((l, i) => l[1] !== esperadas[i])) falhar("datas fora de ordem/faltando", { vet, N });
       if (res.linhas.some(l => !nomes.includes(l[2]))) falhar("nome inválido", { vet, N });
       const aud = auditar(res, vet, nomes);
-      if (aud.quebras !== rel.violacoes[2].quantidade || aud.consec !== rel.violacoes[3].quantidade)
+      if (aud.quebras !== viol(rel, "sequencia") || aud.consec !== viol(rel, "consecutivos"))
         falhar("auditoria difere do relatório", { vet, N, excl, aud, rel: rel.violacoes.map(v => v.quantidade) });
       if (rel.nivel === 1 && (aud.quebras || aud.consec)) falhar("nível 1 com violações", { vet, N, excl });
       if (rel.nivel === 2 && (aud.quebras || !aud.consec)) falhar("nível 2 incoerente", { vet, N, excl });
       if (rel.nivel === 3 && !aud.quebras) falhar("nível 3 sem quebras", { vet, N, excl });
-      if ((N >= rel.viabilidade.nMin) !== (rel.nivel < 3)) falhar("nível incoerente com N_min", { vet, N, excl });
+      if (N < rel.viabilidade.nMin && rel.nivel < 3) falhar("nível incoerente com N_min", { vet, N, excl });
+      // regra fundamental: com 2 ou mais organistas é sempre possível evitar cultos seguidos
+      if (N >= 2 && rel.comprovado && aud.consec) falhar("culto seguido com 2+ organistas", { vet, N, excl, aud });
       if (rel.organistas.reduce((s, o) => s + o.vezes, 0) !== res.linhas.length) falhar("soma de vezes", { vet, N });
       niveis[rel.nivel]++; casos++;
     }
@@ -160,6 +163,23 @@ function testarAno(comExcl, maxN = 8) {
     "| tempo médio", (soma / casos).toFixed(0) + " ms, máx", maxMs + " ms");
 }
 
+// Caso real que motivou a regra fundamental: 15 organistas, DOM/QUA/SAB, 2026, 6 sábados excluídos.
+// Antes, QUA 07/01 e SAB 10/01 saíam com a mesma organista (cultos seguidos, só 3 dias corridos de distância)
+// e o rodízio ainda era classificado como perfeito.
+function testarCasoReal() {
+  const excl = ["14/02/2026", "11/04/2026", "13/06/2026", "08/08/2026", "10/10/2026", "12/12/2026"];
+  const nomes = nomesDe(15), res = gerar([0, 3, 6], nomes, excl, 2026), rel = res.relatorio;
+  const aud = auditar(res, [0, 3, 6], nomes);
+  if (aud.consec) falhar("caso real: cultos seguidos", { consec: aud.consec });
+  if (rel.nivel !== 1 || aud.quebras) falhar("caso real: deveria ser perfeito", { nivel: rel.nivel, quebras: aud.quebras });
+  if (res.linhas.length !== 150) falhar("caso real: número de datas", res.linhas.length);
+  const ult = {}; let menor = Infinity;
+  res.linhas.forEach(([, , o], t) => { if (o in ult) menor = Math.min(menor, t - ult[o] - 1); ult[o] = t; });
+  if (menor < 5) falhar("caso real: intervalo mínimo muito curto (cultos entre dois trabalhos)", { menor });
+  console.log("Caso real (15 organistas, 6 exclusões):", rel.classificacao + ", 0 cultos seguidos, menor intervalo =", menor, "cultos entre dois trabalhos");
+}
+
+testarCasoReal();
 testarForcaBruta(+process.argv[2] || 400);
 testarAno(false);
 testarAno(true);

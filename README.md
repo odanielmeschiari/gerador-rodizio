@@ -22,7 +22,7 @@ js/
   calendario.js       Ano bissexto, dia da semana, conversão dia-do-ano → data
   estado.js           Variáveis de estado compartilhadas (linhas, trocas)
   rodizio-analise.js  Algoritmo, parte 1: datas válidas, viabilidade matemática (N_min), distribuições iniciais
-  rodizio-busca.js    Algoritmo, parte 2: níveis 1/2/3 (busca exaustiva e programação dinâmica) e escolha de quem toca
+  rodizio-busca.js    Algoritmo, parte 2: nível 1 (busca exaustiva), programação dinâmica dos níveis 2/3 e escolha de quem toca
   rodizio.js          Algoritmo, parte 3: fluxo geral (gerarRodizio), relatório final, filtrarPorMeses
   ui-dias.js          Checkboxes dos dias de culto
   ui-organistas.js    Campos dinâmicos de organistas (adicionar/remover)
@@ -48,38 +48,62 @@ Cada organista tem uma *posição*: o próximo dia da sequência circular dos di
 (ex.: DOM → QUA → SAB → DOM...). Ao tocar, avança uma posição; ao não tocar, fica onde está.
 Uma data excluída não existe para o algoritmo (não consome a vez de ninguém).
 
+### Regras e ordem de prioridade
+
+- **Fundamental**: nenhuma organista toca em dois **cultos seguidos**, isto é, em duas datas vizinhas da
+  escala, não importa quantos dias corridos as separem (ex.: QUA 07/01 e SAB 10/01 são seguidos). Só é
+  descumprida se for matematicamente impossível (ex.: uma única organista).
+- **1** Respeitar a sequência individual de dias (cada organista toca em ciclos, sem quebras de ordem).
+- **2** Tocar com o maior tempo possível desde a última vez (maior intervalo mínimo entre dois trabalhos
+  da mesma organista; dentro do mesmo grupo, toca quem espera há mais tempo).
+- **3** Trabalhos igualmente divididos (pouca ou nenhuma diferença entre quem mais e quem menos tocou).
+
+Quando não dá para cumprir tudo, cede-se sempre a regra de menor prioridade.
+
+### Etapas
+
 1. **Datas válidas**: dias de culto do ano, menos as exclusões. Um dia da semana sem nenhuma data
    válida no ano sai da sequência.
 2. **Viabilidade matemática** (seção 9.1): `L_i = max_t(C_i(t) - C_{i-1}(t), 0)` e `N_min = Σ L_i`.
    Com `N ≥ N_min` dá para preencher todas as datas respeitando as sequências.
-3. **Níveis 1 e 2** (sequências respeitadas): examina *todas* as distribuições iniciais viáveis
-   (busca exaustiva, não tentativa isolada). Se alguma evita trabalhos em dias seguidos, o rodízio
-   é **perfeito**; senão é **imperfeito**, com o menor número possível de dias seguidos.
-4. **Nível 3** (`N < N_min`): **contingência**. Programação dinâmica sobre todos os estados minimiza
-   primeiro as quebras de sequência e depois os dias seguidos. Depois de uma quebra, o próximo dia da
-   organista parte do dia em que ela realmente tocou.
-5. **Quem toca em cada data**: entre as que aguardam o dia, a que está há mais tempo sem tocar;
-   empate, ordem alfabética. A que tocou na véspera só é escolhida se for a única opção. Em caso de
+3. **Nível 1, rodízio perfeito**: examina *todas* as distribuições iniciais viáveis (busca exaustiva, não
+   tentativa isolada). Se alguma respeita as sequências **e** evita cultos seguidos, o rodízio é perfeito.
+   Entre as distribuições perfeitas fica a de maior intervalo mínimo e, depois, a mais equilibrada.
+4. **Níveis 2 e 3**: se o nível 1 é impossível (poucas organistas, ou exclusões que deixam alguém sozinha
+   na vez de um dia), as sequências são quebradas só o necessário. Programação dinâmica sobre todos os
+   estados minimiza primeiro os cultos seguidos e depois as quebras de sequência; depois de uma quebra,
+   o próximo dia da organista parte do dia em que ela realmente tocou. A classificação é pelo resultado:
+   **perfeito** (sem cultos seguidos nem quebras), **imperfeito** (sequências respeitadas, mas com cultos
+   seguidos inevitáveis, só com uma organista) ou **contingência** (com quebras de sequência).
+5. **Quem toca em cada data**: entre as que aguardam o dia, a que está há mais tempo sem tocar; empate,
+   ordem alfabética. A que tocou no culto anterior só é escolhida se for a única opção. Em caso de
    quebra, só se escolhe de onde isso não piora o futuro (verificação de datas futuras).
-6. **Desempate entre distribuições iniciais equivalentes**: menor diferença de vezes entre as
-   organistas, maior tempo mínimo sem tocar, intervalos mais uniformes.
-7. **Relatório final** (tela): classificação, violações por regra, distribuição inicial, dias desde o
-   último trabalho, ordem real dos dias de cada organista, exceções e justificativa matemática.
+6. **Desempate entre distribuições iniciais equivalentes** (nesta ordem): menos cultos seguidos, menos
+   quebras, maior tempo mínimo sem tocar, menor diferença de vezes entre as organistas, intervalos mais
+   uniformes.
+7. **Relatório final** (tela): classificação, violações por regra (em ordem de prioridade), menor
+   intervalo entre trabalhos, distribuição inicial, dias desde o último trabalho, ordem real dos dias de
+   cada organista, exceções e justificativa matemática.
 
 Decisões onde a especificação é omissa:
 
-- "Datas consecutivas" = dias consecutivos do calendário (ex.: DOM e SEG), como diz a seção 9.2.
+- "Cultos seguidos" = datas vizinhas da escala já sem as excluídas, independentemente de quantos dias
+  corridos as separem (antes, só contavam dias consecutivos do calendário, como DOM e SEG).
 - O período do algoritmo é o **ano inteiro**; os meses escolhidos só filtram a prévia e a planilha,
   e as exclusões fora do período continuam valendo (a sequência é a mesma em qualquer período).
 - Estado inicial ("dias desde o último trabalho"): o rodízio é tratado como se já estivesse em
   andamento antes de 1º de janeiro, e as organistas são numeradas em ordem alfabética: a mais
   alfabeticamente anterior é a que espera há mais tempo.
-- Muitas organistas (limites no topo de `js/rodizio-busca.js`): a busca do nível 2 examina só as
-  distribuições mais equilibradas e a do nível 3 usa uma solução aproximada. O relatório avisa
-  quando o mínimo deixa de ser comprovado.
+- Muitas organistas (limites no topo de `js/rodizio-busca.js`): a busca do nível 1 examina só as
+  distribuições mais equilibradas e a programação dinâmica dos níveis 2/3 é trocada por uma solução
+  aproximada, que também evita cultos seguidos. O relatório avisa quando o mínimo deixa de ser comprovado.
+- Com pouquíssimas organistas para os dias de culto (ex.: 3 organistas para DOM/QUA/SAB), evitar cultos
+  seguidos obriga a quebrar sequências e, como a ordem de prioridade põe menos quebras acima do
+  equilíbrio, as vezes podem ficar bem desiguais.
 
 Rode `node tests/verificacao.js` depois de mexer no algoritmo: ele compara o resultado com uma
-força bruta (todas as combinações) em milhares de casos pequenos e audita o relatório.
+força bruta (todas as combinações) em centenas de casos pequenos (mínimo de cultos seguidos e, depois,
+de quebras) e audita o relatório.
 `node tests/simulacao.js` mede intervalos e diferença de vezes em centenas de combinações.
 
 ## Onde mexer

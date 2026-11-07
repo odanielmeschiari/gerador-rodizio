@@ -25,18 +25,23 @@ function gerarRodizio(vet, nomes, ano, excluidos = new Set()) {
   // 3. Calcular distribuição inicial / 4. Verificar viabilidade matemática
   const an = analisarViabilidade(datas, ctx.k);
 
-  let nivel, montagem, busca = null, cont = null;
+  // Prioridades: (fundamental) nenhum culto seguido da mesma organista; 1) nenhuma quebra de sequência;
+  // 2) maior tempo possível entre dois trabalhos da mesma organista; 3) trabalhos igualmente divididos.
+  let montagem = null, busca = null, cont = null;
   if (ctx.N >= an.nMin) {
-    // 5. Buscar rodízio perfeito (nível 1) / 7. permitindo consecutivos (nível 2): mesma busca exaustiva
+    // 5. Buscar rodízio perfeito (nível 1): sequências respeitadas e nenhum culto seguido (busca exaustiva)
     busca = buscarSequencia(ctx, an);
-    nivel = busca.minConsec === 0 ? 1 : 2;
-    montagem = melhorMontagem(ctx, busca.candidatas, null);
-  } else {
-    // 9. Buscar solução permitindo quebras de sequência (nível 3: contingência)
-    nivel = 3;
-    cont = resolverContingencia(ctx, an);
+    if (busca.minConsec === 0) montagem = melhorMontagem(ctx, busca.candidatas, null);
+  }
+  if (!montagem) {
+    // 7/9. Sem rodízio perfeito: a regra fundamental vale mais que as sequências, então busca-se o
+    // mínimo de cultos seguidos e, dentro dele, o mínimo de quebras de sequência (níveis 2 e 3)
+    cont = resolverContingencia(ctx, an, busca);
     montagem = cont.montagem;
   }
+  // classificação pelo resultado: 1 perfeito; 2 sequências respeitadas, mas com cultos seguidos
+  // inevitáveis; 3 com quebras de sequência (por falta de organistas ou para evitar cultos seguidos)
+  const nivel = montagem.quebras > 0 ? 3 : montagem.consec > 0 ? 2 : 1;
 
   const linhas = datas.map((d, t) => [NOMES[d.sem], d.data, ordem[montagem.trab[t]]]);
   return { linhas, relatorio: montarRelatorio(ctx, an, nivel, montagem, ordem, busca, cont) };
@@ -74,15 +79,28 @@ function montarRelatorio(ctx, an, nivel, m, ordem, busca, cont) {
     data: dataDe(x.t), anterior: dataDe(x.t - 1), organista: ordem[x.p]
   }));
 
+  // Em ordem de prioridade. `id` identifica a regra (a tela e os testes não dependem da posição).
   const violacoes = [
-    { regra: "Toda data válida com exatamente uma organista", prioridade: "Obrigatória", quantidade: 0 },
-    { regra: "Organista não toca duas vezes na mesma data", prioridade: "Obrigatória", quantidade: 0 },
-    { regra: "Respeitar a sequência individual de dias", prioridade: "Obrigatória, se possível", quantidade: m.quebras },
-    { regra: "Evitar trabalho em datas consecutivas", prioridade: "Obrigatória, se possível", quantidade: m.consec },
-    { regra: "Distribuir trabalhos de maneira equilibrada (diferença entre quem mais e quem menos tocou)", prioridade: "Otimização", quantidade: m.desig },
-    { regra: "Priorizar quem está há mais tempo sem trabalhar (datas em que outra foi escolhida)", prioridade: "Otimização", quantidade: m.desvios },
-    { regra: "Desempatar alfabeticamente", prioridade: "Obrigatória", quantidade: 0 }
+    { id: "cobertura", regra: "Toda data válida com exatamente uma organista", prioridade: "Obrigatória", quantidade: 0 },
+    { id: "mesma-data", regra: "Organista não toca duas vezes na mesma data", prioridade: "Obrigatória", quantidade: 0 },
+    { id: "consecutivos", regra: "Organista não toca em dois cultos seguidos (datas vizinhas da escala, não importa quantos dias as separem)", prioridade: "Fundamental", quantidade: m.consec },
+    { id: "sequencia", regra: "Respeitar a sequência individual de dias (sem quebras de ordem)", prioridade: "Prioridade 1", quantidade: m.quebras },
+    { id: "espera", regra: "Priorizar quem está há mais tempo sem trabalhar (datas em que outra foi escolhida)", prioridade: "Prioridade 2", quantidade: m.desvios },
+    { id: "equilibrio", regra: "Distribuir trabalhos de maneira equilibrada (diferença entre quem mais e quem menos tocou)", prioridade: "Prioridade 3", quantidade: m.desig },
+    { id: "alfabetica", regra: "Desempatar alfabeticamente", prioridade: "Obrigatória", quantidade: 0 }
   ];
+
+  // menor intervalo entre dois trabalhos da mesma organista (dias corridos e cultos que ficaram no meio)
+  let menorIntervalo = null;
+  const ultimoT = new Array(N).fill(-1);
+  datas.forEach((d, t) => {
+    const p = m.trab[t];
+    if (ultimoT[p] >= 0) {
+      const dias = d.dia - datas[ultimoT[p]].dia, cultos = t - ultimoT[p] - 1;
+      if (!menorIntervalo || dias < menorIntervalo.dias) menorIntervalo = { dias, cultos };
+    }
+    ultimoT[p] = t;
+  });
 
   const porDia = v => dias.map((d, i) => NOMES[d] + " " + v[i]).join(", ");
   const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
@@ -90,31 +108,34 @@ function montarRelatorio(ctx, an, nivel, m, ordem, busca, cont) {
   let comprovado = true;
 
   if (nivel >= 2) {
+    const exaustiva = busca ? (busca.exaustiva ? " (todas as combinações possíveis)" : " (busca limitada às mais equilibradas, por haver combinações demais)") : "";
+    if (N < an.nMin) {
+      justificativa.push(
+        "Há " + plural(N, "organista", "organistas") + ", mas preencher todas as datas respeitando as sequências exige pelo menos " +
+        an.nMin + " (mínimos por dia de início: " + porDia(an.L) + "). Com menos que isso é matematicamente impossível, então foi preciso quebrar sequências."
+      );
+    } else {
+      justificativa.push(
+        "Há " + plural(N, "organista", "organistas") + " e o mínimo para preencher todas as datas respeitando as sequências é " +
+        an.nMin + " (" + porDia(an.L) + "): matematicamente as sequências caberiam."
+      );
+      if (busca && busca.minConsec > 0)
+        justificativa.push(
+          "Porém, foram examinadas " + plural(busca.examinadas, "distribuição inicial", "distribuições iniciais") + exaustiva +
+          " e em todas, respeitando as sequências, pelo menos " + plural(busca.minConsec, "trabalho acontece", "trabalhos acontecem") +
+          " em cultos seguidos (a única organista na vez do dia é a que acabou de tocar no culto anterior)."
+        );
+    }
     justificativa.push(
-      N >= an.nMin
-        ? "Há " + plural(N, "organista", "organistas") + " e o mínimo para preencher todas as datas respeitando as sequências é " +
-          an.nMin + " (" + porDia(an.L) + "): as sequências puderam ser respeitadas."
-        : "Há " + plural(N, "organista", "organistas") + ", mas preencher todas as datas respeitando as sequências exige pelo menos " +
-          an.nMin + " (mínimos por dia de início: " + porDia(an.L) + "). Com menos que isso é matematicamente impossível, então foi preciso quebrar sequências."
+      "Cultos seguidos da mesma organista são proibidos e valem mais que as sequências; por isso as sequências só são quebradas quando não há outro jeito."
     );
-  }
-  if (nivel === 2) {
-    comprovado = busca.exaustiva;
-    justificativa.push(
-      "Para evitar trabalhos em dias seguidos foram examinadas " + busca.examinadas + " distribuições iniciais" +
-      (busca.exaustiva ? " (todas as combinações possíveis)" : " (busca limitada às mais equilibradas, por haver combinações demais)") +
-      ". Em todas, o calendário só se completa com pelo menos " + plural(busca.minConsec, "trabalho", "trabalhos") +
-      " em dias seguidos; esse é o menor número possível. Ele é inevitável quando, em duas datas seguidas, a única organista na vez do segundo dia é a que acabou de tocar."
-    );
-  }
-  if (nivel === 3) {
     comprovado = cont.comprovado;
     justificativa.push(
       cont.comprovado
-        ? "O mínimo de " + plural(m.quebras, "quebra de sequência", "quebras de sequência") + " e, dentre as soluções com esse mínimo, " +
-          plural(m.consec, "trabalho", "trabalhos") + " em dias seguidos, foi comprovado por programação dinâmica sobre os " +
+        ? "O mínimo de " + plural(m.consec, "trabalho", "trabalhos") + " em cultos seguidos e, dentre as soluções com esse mínimo, " +
+          plural(m.quebras, "quebra de sequência", "quebras de sequência") + ", foi comprovado por programação dinâmica sobre os " +
           cont.estados + " estados possíveis (busca exaustiva)."
-        : "O número de quebras não foi comprovado como mínimo: o caso é grande demais para a busca exaustiva e foi usada uma solução aproximada."
+        : "Não foi comprovado que cultos seguidos e quebras de sequência estão no mínimo: o caso é grande demais para a busca exaustiva e foi usada uma solução aproximada."
     );
   }
 
@@ -125,7 +146,7 @@ function montarRelatorio(ctx, an, nivel, m, ordem, busca, cont) {
       dias: dias.map(d => NOMES[d]), ocorrencias: an.C, minimos: an.L, nMin: an.nMin, N,
       sequenciaViavel: N >= an.nMin
     },
-    distribuicao, violacoes, quebras, consecutivos, organistas, justificativa
+    distribuicao, violacoes, menorIntervalo, quebras, consecutivos, organistas, justificativa
   };
 }
 

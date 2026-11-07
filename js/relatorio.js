@@ -40,22 +40,27 @@ function renderizarRelatorio() {
   const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
   const rotulo = { 1: "Rodízio perfeito", 2: "Rodízio imperfeito", 3: "Rodízio de contingência" }[r.nivel];
   const viol = r.violacoes;
-  const quebras = viol[2].quantidade, consec = viol[3].quantidade;
+  const qtd = id => viol.find(v => v.id === id).quantidade;
+  const quebras = qtd("sequencia"), consec = qtd("consecutivos");
+  const seguidos = consec ? plural(consec, "trabalho", "trabalhos") + " em cultos seguidos" : "nenhuma organista em cultos seguidos";
 
   let resumo = "Todas as " + r.totalDatas + " datas do ano foram preenchidas, ";
-  if (r.nivel === 1) resumo += "com as sequências respeitadas e sem trabalhos em datas consecutivas.";
-  else if (r.nivel === 2) resumo += "com as sequências respeitadas, mas com " + plural(consec, "trabalho", "trabalhos") + " em datas consecutivas.";
-  else resumo += "com " + plural(quebras, "quebra de sequência", "quebras de sequência") + " e " + plural(consec, "trabalho", "trabalhos") + " em datas consecutivas.";
+  if (r.nivel === 1) resumo += "com as sequências respeitadas e sem nenhuma organista em cultos seguidos.";
+  else if (r.nivel === 2) resumo += "com as sequências respeitadas, mas com " + seguidos + " (inevitável).";
+  else resumo += "com " + plural(quebras, "quebra de sequência", "quebras de sequência") + " e " + seguidos + ".";
 
   const topo = nodo("div", undefined, "prevbar");
   topo.append(nodo("h2", "Relatório do algoritmo", "tit"), nodo("span", rotulo, "selo n" + r.nivel));
   box.append(topo, nodo("p", resumo));
+  if (r.menorIntervalo)
+    box.append(nodo("p", "Menor intervalo entre dois trabalhos da mesma organista: " + plural(r.menorIntervalo.dias, "dia", "dias") +
+      " (" + plural(r.menorIntervalo.cultos, "culto", "cultos") + " entre os dois).", "hint"));
   box.append(nodo("p", "Este relatório vale para o rodízio do ano inteiro, antes de trocas manuais. O período escolhido apenas filtra a prévia.", "hint"));
 
   if (r.justificativa.length) {
     const ul = nodo("ul");
     r.justificativa.forEach(j => ul.append(nodo("li", j)));
-    box.append(secao(r.nivel === 3 ? "Por que não foi possível respeitar todas as sequências" : "Por que não é perfeito", ul, true));
+    box.append(secao(r.nivel === 3 ? "Por que há quebras de sequência" : "Por que não é perfeito", ul, true));
   }
 
   box.append(secao("Regras e violações",
@@ -66,7 +71,7 @@ function renderizarRelatorio() {
     tabelaSimples(["Dia", "Qtd.", "Organistas"], dist)));
 
   box.append(secao("Organistas: trabalhos e dias desde o último",
-    tabelaSimples(["Organista", "Vezes", "Dias desde o último trabalho", "Quebras", "Consecutivos"],
+    tabelaSimples(["Organista", "Vezes", "Dias desde o último trabalho", "Quebras", "Cultos seguidos"],
       r.organistas.map(o => [o.nome, o.vezes, o.diasDesdeUltimo, o.quebras, o.consecutivos]))));
 
   const seq = nodo("div", undefined, "wrap livre seq");
@@ -84,7 +89,7 @@ function renderizarRelatorio() {
       ex.append(tabelaSimples(["Data", "Organista", "Esperado", "Tocou"], r.quebras.map(q => [q.data, q.organista, q.esperado, q.real])));
     }
     if (r.consecutivos.length) {
-      ex.append(nodo("p", "Trabalhos em datas consecutivas:", "hint"));
+      ex.append(nodo("p", "Trabalhos em cultos seguidos:", "hint"));
       ex.append(tabelaSimples(["Organista", "Datas"], r.consecutivos.map(c => [c.organista, c.anterior + " e " + c.data])));
     }
     box.append(secao("Exceções registradas", ex));

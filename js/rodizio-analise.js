@@ -7,8 +7,9 @@
    o cálculo matemático trabalha com CONTAGENS por posição (a[i] = quantas organistas esperam o dia i). */
 
 // Seção 1: datas válidas do ano (dias de culto que não foram excluídos), em ordem cronológica.
-//   j   = índice da data na sequência circular dos dias (0 = primeiro dia da lista)
-//   adj = true se a data anterior do rodízio é o dia civil imediatamente anterior (ex.: DOM e SEG)
+//   j = índice da data na sequência circular dos dias (0 = primeiro dia da lista)
+// Cultos seguidos = duas datas vizinhas desta lista, não importa quantos dias corridos as separem
+// (ex.: QUA 07/01 e SAB 10/01 são seguidos; a lista já não contém as datas excluídas).
 // Um dia da semana sem nenhuma data válida no ano (todas excluídas) sai da sequência circular.
 function prepararDatas(vet, ano, excluidos) {
   const max = bissexto(ano) ? 366 : 365;
@@ -18,9 +19,8 @@ function prepararDatas(vet, ano, excluidos) {
     if (vet.includes(sem) && !excluidos.has(dataDoDia(dia, ano))) brutas.push({ dia, sem });
   }
   const dias = vet.filter(v => brutas.some(d => d.sem === v));
-  const datas = brutas.map((d, i) => ({
-    dia: d.dia, sem: d.sem, data: dataDoDia(d.dia, ano), j: dias.indexOf(d.sem),
-    adj: i > 0 && brutas[i - 1].dia === d.dia - 1
+  const datas = brutas.map(d => ({
+    dia: d.dia, sem: d.sem, data: dataDoDia(d.dia, ano), j: dias.indexOf(d.sem)
   }));
   return { dias, datas };
 }
