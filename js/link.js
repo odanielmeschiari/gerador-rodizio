@@ -1,4 +1,4 @@
-/* Link de compartilhamento: congela o rodízio (configuração, resultado, trocas e relatório) dentro do próprio
+/* Link de compartilhamento: congela o rodízio (configuração, resultado e trocas) dentro do próprio
    endereço, depois do "#". Nada vai para servidor: quem abre o link recebe uma cópia e as alterações dela
    ficam só no navegador dessa pessoa, então o link continua sempre igual. */
 
@@ -40,16 +40,79 @@ async function desempacotarLink(texto) {
 }
 
 // ---- estado <-> instantâneo ----
+// O link guarda só o essencial (versão 2): configuração, quem toca em cada data e as trocas. As datas saem do
+// calendário e o relatório é recalculado ao abrir (e só aparece se der o mesmo rodízio guardado no link).
+
+// todas as datas de culto do ano nos meses indicados, em ordem (inclui as excluídas)
+function datasCultos(ano, dias, meses) {
+  const datas = [];
+  const total = bissexto(ano) ? 366 : 365;
+  for (let n = 1; n <= total; n++) {
+    if (!dias.includes(diaAtual(n, ano))) continue;
+    const data = dataDoDia(n, ano);
+    if (meses.includes(parseInt(data.slice(3, 5), 10))) datas.push(data);
+  }
+  return datas;
+}
+
+function mesesDoPeriodo(per, custom) {
+  if (per === "ano") return [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+  if (per === "s1") return [1, 2, 3, 4, 5, 6];
+  if (per === "s2") return [7, 8, 9, 10, 11, 12];
+  return custom;
+}
+
 function instantaneoAtual() {
-  return {
-    v: 1,
-    ano: configAtual.ano, per: configAtual.per, meses: configAtual.meses, excl: configAtual.excl,
-    dias: diasAtuais, nomes: nomesAtuais,
-    // por data: índice da organista do rodízio gerado (-1 = dia excluído); as trocas vão à parte
-    linhas: linhasAtuais.map(r => [r[1], r[3] ? -1 : nomesAtuais.indexOf(r[2])]),
-    trocas: Object.assign({}, trocas),
-    relatorio: relatorioAtual
+  const { ano, per, meses, excl } = configAtual;
+  const datas = datasCultos(ano, diasAtuais, meses);
+  const cod = {};   // data -> índice da organista do rodízio gerado (0 = dia excluído)
+  linhasAtuais.forEach(r => { cod[r[1]] = r[3] ? 0 : nomesAtuais.indexOf(r[2]) + 1; });
+  const d = {
+    v: 2, a: ano, p: per, d: diasAtuais, n: nomesAtuais,
+    x: excl.filter(e => parseInt(e.slice(6), 10) === ano).map(e => {   // exclusões como nº do dia no ano
+      const [dd, mm] = e.split("/").map(Number);
+      return diaDoAno(dd, mm, ano);
+    }),
+    c: datas.map(dt => cod[dt] || 0),
+    t: []   // trocas manuais: [posição da data, índice da organista]
   };
+  if (per === "custom") d.m = meses;
+  Object.keys(trocas).forEach(dt => {
+    const i = datas.indexOf(dt), o = nomesAtuais.indexOf(trocas[dt]);
+    if (i >= 0 && o >= 0) d.t.push([i, o]);
+  });
+  return d;
+}
+
+// versão 2 -> forma completa usada por validarInstantaneo/aplicarInstantaneo
+function expandirV2(d) {
+  const ok = c => { if (!c) throw new Error("link inválido"); };
+  const inteiro = (x, a, b) => Number.isInteger(x) && x >= a && x <= b;
+  ok(d && inteiro(d.a, 1, 9999) && ["ano", "s1", "s2", "custom"].includes(d.p));
+  ok(Array.isArray(d.d) && d.d.length && d.d.every(x => inteiro(x, 0, 6)));
+  ok(Array.isArray(d.n) && d.n.length && d.n.every(n => typeof n === "string"));
+  ok(Array.isArray(d.x) && d.x.every(x => inteiro(x, 1, 366)));
+  ok(Array.isArray(d.c) && Array.isArray(d.t));
+  ok(d.p !== "custom" || (Array.isArray(d.m) && d.m.every(x => inteiro(x, 1, 12))));
+  const meses = mesesDoPeriodo(d.p, d.m);
+  const excl = d.x.map(x => dataDoDia(x, d.a));
+  const datas = datasCultos(d.a, d.d, meses);
+  ok(datas.length === d.c.length && d.c.every(x => inteiro(x, 0, d.n.length)));
+  const linhas = datas.map((dt, i) => [dt, d.c[i] - 1]);
+  const trocas = {};
+  d.t.forEach(t => { ok(Array.isArray(t) && inteiro(t[0], 0, datas.length - 1) && inteiro(t[1], 0, d.n.length - 1)); trocas[datas[t[0]]] = d.n[t[1]]; });
+
+  // relatório: recalculado; só vale se o algoritmo atual der exatamente o rodízio guardado
+  let relatorio = null;
+  try {
+    const res = gerarRodizio(d.d, d.n, d.a, new Set(excl));
+    const gerado = filtrarPorMeses(res.linhas, meses);
+    const porData = {};
+    gerado.forEach(l => { porData[l[1]] = l[2]; });
+    const guardadas = linhas.filter(l => l[1] >= 0);
+    if (guardadas.length === gerado.length && guardadas.every(l => porData[l[0]] === d.n[l[1]])) relatorio = res.relatorio;
+  } catch (e) { relatorio = null; }
+  return { v: 1, ano: d.a, per: d.p, meses, excl, dias: d.d, nomes: d.n, linhas, trocas, relatorio };
 }
 
 function validarInstantaneo(d) {
@@ -134,7 +197,8 @@ async function copiarLink() {
 async function restaurarDoLink() {
   if (!location.hash.startsWith(PREFIXO_LINK)) return;
   try {
-    const d = await desempacotarLink(location.hash.slice(PREFIXO_LINK.length));
+    let d = await desempacotarLink(location.hash.slice(PREFIXO_LINK.length));
+    if (d && d.v === 2) d = expandirV2(d);
     validarInstantaneo(d);
     aplicarInstantaneo(d);
   } catch (e) {
