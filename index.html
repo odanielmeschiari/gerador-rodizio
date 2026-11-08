@@ -75,6 +75,16 @@
     <div class="wrap livre"><table><thead><tr><th>Organista</th><th>Vezes</th><th>Por dia</th><th>Intervalo (dias)<br><small>mín / média / máx</small></th><th>Quebras de ordem</th></tr></thead><tbody id="rs"></tbody></table></div>
     <p class="hint">Quebra de ordem: vez em que a organista tocou um dia diferente do que costuma vir depois do dia anterior dela. Linhas em amarelo têm quebras.</p>
   </details>
+  <details>
+    <summary>Como o algoritmo funciona</summary>
+    <ul>
+      <li>Cada organista segue uma sequência circular dos dias de culto (ex.: DOM → QUA → SAB → DOM). Ao tocar, avança para o próximo dia da sequência; ao não tocar, fica onde está.</li>
+      <li>O rodízio é calculado para o ano inteiro, data por data. Dias excluídos não existem para o cálculo e não gastam a vez de ninguém; o período escolhido só filtra o que aparece.</li>
+      <li>Em cada data toca a organista que está há mais tempo sem tocar entre as que aguardam aquele dia; se houver empate, vale a ordem alfabética.</li>
+      <li>Regras, da mais importante para a menos importante: nenhuma organista toca em dois cultos seguidos; respeitar a sequência de cada uma; deixar o maior tempo possível entre dois cultos da mesma organista; dividir os cultos de forma igual.</li>
+      <li>O algoritmo testa todas as formas de distribuir as organistas pelos dias no início do ano e escolhe a melhor. Quando nenhuma cumpre todas as regras, cede sempre a de menor prioridade, e o rodízio é classificado como imperfeito.</li>
+    </ul>
+  </details>
 </details>
 </main>
 

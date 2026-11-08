@@ -59,9 +59,9 @@ function renderizarRelatorio() {
   box.append(nodo("p", "Este relatório vale para o rodízio do ano inteiro, antes de trocas manuais. O período escolhido apenas filtra a prévia.", "hint"));
 
   if (r.justificativa.length) {
-    const ul = nodo("ul");
-    r.justificativa.forEach(j => ul.append(nodo("li", j)));
-    box.append(secao(r.nivel === 3 ? "Por que há quebras de sequência" : "Por que não é perfeito", ul));
+    box.append(secao(r.nivel === 3 ? "Por que há quebras de sequência" : "Por que não é perfeito",
+      nodo("p", "Dadas a quantidade de organistas, os dias específicos excluídos do calendário e o período escolhido, " +
+        "não existe rodízio perfeito para esse caso. Leia a seção “Como o algoritmo funciona” para entender melhor.")));
   }
 
   box.append(secao("Regras e violações",
