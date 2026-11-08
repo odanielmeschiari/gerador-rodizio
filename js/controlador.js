@@ -30,6 +30,9 @@ function gerar() {
   linhasAtuais = todas;
   nomesAtuais = nomes;
   relatorioAtual = resultado.relatorio;
+  configAtual = { ano, per: $("per").value, meses: sel, excl: [...excluidos] };
+  $("linkBox").hidden = true;
+  $("avisoLink").hidden = true;
   renderizar();
   renderizarRelatorio();
   $("relCompleto").style.display = "block";   // seção no fim da página (recolhida por padrão)

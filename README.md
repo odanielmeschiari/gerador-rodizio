@@ -35,6 +35,7 @@ js/
   xlsx.js             Montagem do .xlsx (planilha, estilos, pacote)
   pdf.js              Montagem do .pdf (tabela do rodízio, sem bibliotecas)
   download.js         Salvamento dos arquivos (planilha e PDF)
+  link.js             Link de compartilhamento: congela o rodízio no endereço (depois do #) e o restaura ao abrir
   main.js             Inicialização e eventos
 tests/
   verificacao.js      Prova do algoritmo contra força bruta + auditoria (node tests/verificacao.js)

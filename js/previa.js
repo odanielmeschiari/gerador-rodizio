@@ -81,4 +81,5 @@ function renderizar() {
   $("prev").style.display = "block";
   $("baixarXlsx").disabled = false;
   $("baixarPdf").disabled = false;
+  $("gerarLink").disabled = false;
 }

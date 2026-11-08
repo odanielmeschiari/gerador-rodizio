@@ -57,8 +57,15 @@
   <button id="gerar">Gerar rodízio</button>
   <button id="baixarXlsx" class="sec" disabled>Baixar planilha</button>
   <button id="baixarPdf" class="sec" disabled>Baixar PDF</button>
+  <button id="gerarLink" class="sec" disabled>Gerar link</button>
 </div>
 <div id="msg" class="err" role="alert"></div>
+<p class="hint" id="avisoLink" hidden>Rodízio aberto por um link. As alterações feitas aqui ficam só neste navegador; o link continua igual.</p>
+<div class="card" id="linkBox" hidden style="margin-top:16px">
+  <label for="linkUrl">Link do rodízio</label>
+  <div class="linkrow"><input id="linkUrl" type="text" readonly><button type="button" id="copiarLink" class="sec peq">Copiar</button></div>
+  <p class="hint" id="linkInfo"></p>
+</div>
 
 <div class="card" id="prev" style="display:none;margin-top:16px">
   <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download. Dias excluídos aparecem em vermelho.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
@@ -107,6 +114,7 @@
 <script src="js/xlsx.js"></script>
 <script src="js/pdf.js"></script>
 <script src="js/download.js"></script>
+<script src="js/link.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>

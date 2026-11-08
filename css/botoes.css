@@ -5,4 +5,5 @@ button.sec{background:transparent;color:var(--tx);border-color:var(--ac2)}
 .logo{display:block;width:180px;max-width:60%;height:auto;margin:0 auto 14px;border-radius:6px}
 h1,.sub{text-align:center}
 button:disabled{opacity:.45;cursor:not-allowed}
+.linkrow{display:flex;gap:8px;align-items:center}
 .err{color:#b3261e;margin-top:10px;font-weight:600}

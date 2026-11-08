@@ -13,6 +13,8 @@ montarMeses();
 $("gerar").addEventListener("click", gerar);
 $("baixarXlsx").addEventListener("click", baixarPlanilha);
 $("baixarPdf").addEventListener("click", baixarPdf);
+$("gerarLink").addEventListener("click", gerarLink);
+$("copiarLink").addEventListener("click", copiarLink);
 $("limpar").addEventListener("click", () => {
   Object.keys(trocas).forEach(k => delete trocas[k]);
   renderizar();
@@ -23,3 +25,7 @@ $("addOrg").addEventListener("click", () => addOrganista(true));
 $("embaralhar").addEventListener("click", embaralharOrganistas);
 $("ordemAlfa").addEventListener("click", ordenarOrganistasAlfabetica);
 montarExclusao();
+
+// link de compartilhamento: se o endereço trouxer um rodízio congelado, restaura
+restaurarDoLink();
+window.addEventListener("hashchange", restaurarDoLink);
