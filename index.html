@@ -46,17 +46,22 @@
 <div class="card">
   <label for="org1" id="orgLabel">Organistas</label>
   <div class="orgs" id="orgs"></div>
-  <button type="button" id="addOrg" class="sec peq mais" aria-label="Adicionar organista" title="Adicionar organista">+</button>
+  <div class="orgbar">
+    <button type="button" id="addOrg" class="sec peq mais" aria-label="Adicionar organista" title="Adicionar organista">+</button>
+    <button type="button" id="embaralhar" class="sec peq">Embaralhar</button>
+    <button type="button" id="ordemAlfa" class="sec peq">Ordem alfabética</button>
+  </div>
 </div>
 
 <div class="btns">
   <button id="gerar">Gerar rodízio</button>
-  <button id="baixar" class="sec" disabled>Download do rodízio</button>
+  <button id="baixarXlsx" class="sec" disabled>Baixar planilha</button>
+  <button id="baixarPdf" class="sec" disabled>Baixar PDF</button>
 </div>
 <div id="msg" class="err" role="alert"></div>
 
 <div class="card" id="prev" style="display:none;margin-top:16px">
-  <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
+  <div class="prevbar"><p class="hint">Use a lista de cada linha para trocar a organista daquele dia. As trocas aparecem destacadas e vão para o download. Dias excluídos aparecem em vermelho.</p><button id="limpar" class="sec peq" style="display:none">Limpar trocas</button></div>
   <div class="wrap"><table><thead><tr><th>Dia</th><th>Data</th><th>Organista</th></tr></thead><tbody id="tb"></tbody></table></div>
 </div>
 
@@ -90,6 +95,7 @@
 <script src="js/controlador.js"></script>
 <script src="js/zip.js"></script>
 <script src="js/xlsx.js"></script>
+<script src="js/pdf.js"></script>
 <script src="js/download.js"></script>
 <script src="js/main.js"></script>
 </body>

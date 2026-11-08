@@ -1,7 +1,7 @@
 /* Prévia editável do rodízio (tabela e trocas manuais) */
 
 function atualizarLinhasFinais() {
-  linhasFinais = linhasAtuais.map(r => [r[0], r[1], trocas[r[1]] !== undefined ? trocas[r[1]] : r[2]]);
+  linhasFinais = linhasAtuais.map(r => r[3] ? r : [r[0], r[1], trocas[r[1]] !== undefined ? trocas[r[1]] : r[2]]);
   const n = Object.keys(trocas).filter(k => linhasAtuais.some(r => r[1] === k)).length;
   $("limpar").style.display = n ? "" : "none";
   $("limpar").textContent = "Limpar trocas (" + n + ")";
@@ -14,7 +14,7 @@ function renderizarResumo() {
   tb.innerHTML = "";
   const virgula = x => x.toFixed(1).replace(".", ",");
   nomesAtuais.forEach(nome => {
-    const l = linhasFinais.filter(r => r[2] === nome);
+    const l = linhasFinais.filter(r => !r[3] && r[2] === nome);
     const dias = l.map(r => diasCorridos(r[1]));
     const gaps = dias.slice(1).map((x, i) => x - dias[i]);
 
@@ -53,9 +53,16 @@ function renderizar() {
   tb.innerHTML = "";
   linhasAtuais.forEach(l => {
     const tr = document.createElement("tr");
-    const [dia, data, base] = l;
+    const [dia, data, base, excluido] = l;
     [dia, data].forEach(c => { const td = document.createElement("td"); td.textContent = c; tr.append(td); });
     const td = document.createElement("td");
+    if (excluido) {   // dia excluído: sem lista de troca, texto em vermelho
+      td.textContent = base;
+      tr.className = "exclu";
+      tr.append(td);
+      tb.append(tr);
+      return;
+    }
     const sel = document.createElement("select");
     sel.setAttribute("aria-label", "Organista de " + dia + " " + data);
     nomesAtuais.forEach(n => sel.add(new Option(n, n)));
@@ -72,5 +79,6 @@ function renderizar() {
   });
   atualizarLinhasFinais();
   $("prev").style.display = "block";
-  $("baixar").disabled = false;
+  $("baixarXlsx").disabled = false;
+  $("baixarPdf").disabled = false;
 }

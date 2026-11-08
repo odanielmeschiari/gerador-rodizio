@@ -1,4 +1,4 @@
 /* Tokens de cor e ajustes de área segura (iOS/Android) */
-:root{--bg:#e8f4ee;--card:#fbfefc;color-scheme:light;--tx:#1f1d1a;--mut:#6b675f;--bd:#d9d6cd;--ac:#a9d8c4;--act:#173028;--ac2:#5f8f7d;
+:root{--bg:#ffffff;--card:#fbfefc;color-scheme:light;--tx:#1f1d1a;--mut:#6b675f;--bd:#d9d6cd;--ac:#a9d8c4;--act:#173028;--ac2:#5f8f7d;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}

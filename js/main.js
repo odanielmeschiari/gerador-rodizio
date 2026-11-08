@@ -11,7 +11,8 @@ $("ano").addEventListener("input", montarExclusao);
 $("limparExcl").addEventListener("click", () => { excluidos.clear(); montarExclusao(); });
 montarMeses();
 $("gerar").addEventListener("click", gerar);
-$("baixar").addEventListener("click", baixar);
+$("baixarXlsx").addEventListener("click", baixarPlanilha);
+$("baixarPdf").addEventListener("click", baixarPdf);
 $("limpar").addEventListener("click", () => {
   Object.keys(trocas).forEach(k => delete trocas[k]);
   renderizar();
@@ -19,4 +20,6 @@ $("limpar").addEventListener("click", () => {
 montarDias();
 addOrganista(false);
 $("addOrg").addEventListener("click", () => addOrganista(true));
+$("embaralhar").addEventListener("click", embaralharOrganistas);
+$("ordemAlfa").addEventListener("click", ordenarOrganistasAlfabetica);
 montarExclusao();

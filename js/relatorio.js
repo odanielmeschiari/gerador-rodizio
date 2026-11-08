@@ -39,7 +39,7 @@ function renderizarRelatorio() {
   if (!r) return;
 
   const plural = (n, s, p) => n + " " + (n === 1 ? s : p);
-  const rotulo = { 1: "Rodízio perfeito", 2: "Rodízio imperfeito", 3: "Rodízio de contingência" }[r.nivel];
+  const rotulo = { 1: "Rodízio perfeito", 2: "Rodízio imperfeito", 3: "Rodízio imperfeito" }[r.nivel];
   const viol = r.violacoes;
   const qtd = id => viol.find(v => v.id === id).quantidade;
   const quebras = qtd("sequencia"), consec = qtd("consecutivos");
@@ -54,7 +54,7 @@ function renderizarRelatorio() {
   topo.append(nodo("h2", "Relatório do algoritmo", "tit"), nodo("span", rotulo, "selo n" + r.nivel));
   box.append(topo, nodo("p", resumo));
   if (r.menorIntervalo)
-    box.append(nodo("p", "Menor intervalo entre dois trabalhos da mesma organista: " + plural(r.menorIntervalo.dias, "dia", "dias") +
+    box.append(nodo("p", "Menor intervalo entre dois cultos da mesma organista: " + plural(r.menorIntervalo.dias, "dia", "dias") +
       " (" + plural(r.menorIntervalo.cultos, "culto", "cultos") + " entre os dois).", "hint"));
   box.append(nodo("p", "Este relatório vale para o rodízio do ano inteiro, antes de trocas manuais. O período escolhido apenas filtra a prévia.", "hint"));
 
@@ -71,17 +71,13 @@ function renderizarRelatorio() {
   box.append(secao("Distribuição inicial utilizada (quem começa esperando cada dia)",
     tabelaSimples(["Dia", "Qtd.", "Organistas"], dist)));
 
-  box.append(secao("Organistas: trabalhos e dias desde o último",
-    tabelaSimples(["Organista", "Vezes", "Dias desde o último trabalho", "Quebras", "Cultos seguidos"],
-      r.organistas.map(o => [o.nome, o.vezes, o.diasDesdeUltimo, o.quebras, o.consecutivos]))));
-
   const seq = nodo("div", undefined, "wrap livre seq");
   r.organistas.forEach(o => {
     const p = nodo("p");
     p.append(nodo("strong", o.nome + ": "), document.createTextNode(o.sequencia.join(" → ") || "não toca"));
     seq.append(p);
   });
-  box.append(secao("Ordem real dos dias trabalhados por organista", seq));
+  box.append(secao("Ordem dos dias tocados por organista", seq));
 
   if (r.quebras.length || r.consecutivos.length) {
     const ex = nodo("div");

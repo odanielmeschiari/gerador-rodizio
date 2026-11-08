@@ -85,8 +85,8 @@ function montarRelatorio(ctx, an, nivel, m, ordem, busca, cont) {
     { id: "mesma-data", regra: "Organista não toca duas vezes na mesma data", prioridade: "Obrigatória", quantidade: 0 },
     { id: "consecutivos", regra: "Organista não toca em dois cultos seguidos (datas vizinhas da escala, não importa quantos dias as separem)", prioridade: "Fundamental", quantidade: m.consec },
     { id: "sequencia", regra: "Respeitar a sequência individual de dias (sem quebras de ordem)", prioridade: "Prioridade 1", quantidade: m.quebras },
-    { id: "espera", regra: "Priorizar quem está há mais tempo sem trabalhar (datas em que outra foi escolhida)", prioridade: "Prioridade 2", quantidade: m.desvios },
-    { id: "equilibrio", regra: "Distribuir trabalhos de maneira equilibrada (diferença entre quem mais e quem menos tocou)", prioridade: "Prioridade 3", quantidade: m.desig },
+    { id: "espera", regra: "Priorizar quem está há mais tempo sem tocar (datas em que outra foi escolhida)", prioridade: "Prioridade 2", quantidade: m.desvios },
+    { id: "equilibrio", regra: "Distribuir cultos de maneira equilibrada (diferença entre quem mais e quem menos tocou)", prioridade: "Prioridade 3", quantidade: m.desig },
     { id: "alfabetica", regra: "Desempatar alfabeticamente", prioridade: "Obrigatória", quantidade: 0 }
   ];
 

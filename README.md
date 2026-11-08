@@ -1,6 +1,6 @@
 # Rodízio Automático: Organistas CCB
 
-Gerador de rodízio de organistas com exportação para planilha `.xlsx`.
+Gerador de rodízio de organistas com exportação para planilha `.xlsx` e para `.pdf`.
 Funciona abrindo `index.html` direto no navegador (sem servidor, sem dependências).
 
 ## Estrutura
@@ -25,7 +25,7 @@ js/
   rodizio-busca.js    Algoritmo, parte 2: nível 1 (busca exaustiva), programação dinâmica dos níveis 2/3 e escolha de quem toca
   rodizio.js          Algoritmo, parte 3: fluxo geral (gerarRodizio), relatório final, filtrarPorMeses
   ui-dias.js          Checkboxes dos dias de culto
-  ui-organistas.js    Campos dinâmicos de organistas (adicionar/remover)
+  ui-organistas.js    Campos dinâmicos de organistas (adicionar, remover, mudar posição, embaralhar e ordem alfabética)
   ui-meses.js         Período e meses selecionados
   ui-exclusao.js      Mini-calendário para excluir dias do rodízio
   previa.js           Tabela de prévia, trocas manuais e resumo por organista
@@ -33,7 +33,8 @@ js/
   controlador.js      Valida o formulário e orquestra a geração (gerar)
   zip.js              CRC32 e empacotador ZIP sem compressão
   xlsx.js             Montagem do .xlsx (planilha, estilos, pacote)
-  download.js         Salvamento do arquivo
+  pdf.js              Montagem do .pdf (tabela do rodízio, sem bibliotecas)
+  download.js         Salvamento dos arquivos (planilha e PDF)
   main.js             Inicialização e eventos
 tests/
   verificacao.js      Prova do algoritmo contra força bruta + auditoria (node tests/verificacao.js)
@@ -74,7 +75,8 @@ Quando não dá para cumprir tudo, cede-se sempre a regra de menor prioridade.
    estados minimiza primeiro os cultos seguidos e depois as quebras de sequência; depois de uma quebra,
    o próximo dia da organista parte do dia em que ela realmente tocou. A classificação é pelo resultado:
    **perfeito** (sem cultos seguidos nem quebras), **imperfeito** (sequências respeitadas, mas com cultos
-   seguidos inevitáveis, só com uma organista) ou **contingência** (com quebras de sequência).
+   seguidos inevitáveis, só com uma organista) ou **contingência** (com quebras de sequência; na tela,
+   o selo dos dois casos aparece como "Rodízio imperfeito", em cores diferentes).
 5. **Quem toca em cada data**: entre as que aguardam o dia, a que está há mais tempo sem tocar; empate,
    ordem alfabética. A que tocou no culto anterior só é escolhida se for a única opção. Em caso de
    quebra, só se escolhe de onde isso não piora o futuro (verificação de datas futuras).
@@ -82,7 +84,7 @@ Quando não dá para cumprir tudo, cede-se sempre a regra de menor prioridade.
    quebras, maior tempo mínimo sem tocar, menor diferença de vezes entre as organistas, intervalos mais
    uniformes.
 7. **Relatório final** (tela): classificação, violações por regra (em ordem de prioridade), menor
-   intervalo entre trabalhos, distribuição inicial, dias desde o último trabalho, ordem real dos dias de
+   intervalo entre cultos, distribuição inicial, ordem dos dias tocados por
    cada organista, exceções e justificativa matemática.
 
 Decisões onde a especificação é omissa:
@@ -111,7 +113,7 @@ de quebras) e audita o relatório.
 - **Mudar a lógica do rodízio** → `js/rodizio-analise.js`, `js/rodizio-busca.js` e `js/rodizio.js` (e conferir com `tests/verificacao.js`)
 - **Mudar o relatório do algoritmo** → `js/rodizio.js` (dados) e `js/relatorio.js` (tela)
 - **Mudar o calendário de exclusão** → `js/ui-exclusao.js` e `css/exclusao.css`
-- **Mudar o visual da planilha exportada** → `js/xlsx.js`
+- **Mudar o visual da planilha exportada** → `js/xlsx.js` (e do PDF → `js/pdf.js`)
 - **Mudar cores/aparência da página** → `css/variaveis.css` e demais `css/`
 - **Mudar validações e mensagens de erro** → `js/controlador.js`
 
