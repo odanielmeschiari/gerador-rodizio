@@ -13,7 +13,9 @@ textarea{min-height:120px;resize:vertical}
 .orgs{display:flex;flex-direction:column;gap:8px}
 .orgs .lin{display:flex;gap:8px;align-items:center}
 .orgs .rem{flex:none;min-width:40px;line-height:1}
-.orgs select.pos{flex:none;width:auto;min-width:64px;padding:8px 6px}
+.orgs .alca{flex:none;min-width:40px;line-height:1;cursor:grab;touch-action:none;user-select:none}
+.orgs .lin.arrastando{opacity:.6}
+.orgs .lin.arrastando .alca{cursor:grabbing}
 .orgbar{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
 .mais{min-width:40px;font-size:1.1rem;line-height:1}
 .hint{color:var(--mut);font-size:.85rem;margin:6px 0 0}

@@ -25,7 +25,7 @@ js/
   rodizio-busca.js    Algoritmo, parte 2: nível 1 (busca exaustiva), programação dinâmica dos níveis 2/3 e escolha de quem toca
   rodizio.js          Algoritmo, parte 3: fluxo geral (gerarRodizio), relatório final, filtrarPorMeses
   ui-dias.js          Checkboxes dos dias de culto
-  ui-organistas.js    Campos dinâmicos de organistas (adicionar, remover, mudar posição, embaralhar e ordem alfabética)
+  ui-organistas.js    Campos dinâmicos de organistas (adicionar, remover, arrastar para mudar a posição, embaralhar e ordem alfabética)
   ui-meses.js         Período e meses selecionados
   ui-exclusao.js      Mini-calendário para excluir dias do rodízio
   previa.js           Tabela de prévia, trocas manuais e resumo por organista

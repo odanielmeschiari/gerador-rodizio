@@ -11,10 +11,15 @@ function addOrganista(focar) {
   c.addEventListener("keydown", e => {
     if (e.key === "Enter") { e.preventDefault(); addOrganista(true); }
   });
-  // seletor de posição: escolher um número move a organista para aquele lugar da lista
-  const p = document.createElement("select");
-  p.className = "pos";
-  p.addEventListener("change", () => moverOrganista(lin, parseInt(p.value) - 1));
+  // alça de arrastar: segure e arraste para a posição desejada (setas ↑ ↓ também movem)
+  const p = document.createElement("button");
+  p.type = "button"; p.className = "sec peq alca"; p.textContent = "☰";
+  p.addEventListener("pointerdown", e => iniciarArraste(lin, e));
+  p.addEventListener("keydown", e => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    e.preventDefault();
+    moverOrganista(lin, [...$("orgs").children].indexOf(lin) + (e.key === "ArrowUp" ? -1 : 1));
+  });
   const r = document.createElement("button");
   r.type = "button"; r.className = "sec peq rem"; r.textContent = "×";
   r.addEventListener("click", () => removerOrganista(lin));
@@ -42,7 +47,34 @@ function moverOrganista(lin, destino) {
   if (!alvo || alvo === lin) return;
   if (destino > irmaos.indexOf(lin)) alvo.after(lin); else alvo.before(lin);
   atualizarOrganistas();
-  lin.querySelector("select").focus();
+  lin.querySelector(".alca").focus();
+}
+
+// arrastar e soltar: enquanto o ponteiro se move, a linha troca de lugar com a que está sob ele
+// (pointer events: funciona com mouse e com toque)
+function iniciarArraste(lin, e) {
+  if (e.button !== undefined && e.button !== 0) return;
+  const box = $("orgs");
+  if (box.children.length < 2) return;
+  e.preventDefault();
+  box.setPointerCapture(e.pointerId);   // no contêiner, que não sai do DOM quando a linha muda de lugar
+  lin.classList.add("arrastando");
+  const mover = ev => {
+    const outras = [...box.children].filter(l => l !== lin);
+    const alvo = outras.find(l => { const b = l.getBoundingClientRect(); return ev.clientY < b.top + b.height / 2; });
+    if (alvo) { if (lin.nextElementSibling !== alvo) alvo.before(lin); }
+    else if (box.lastElementChild !== lin) box.append(lin);
+  };
+  const fim = () => {
+    box.removeEventListener("pointermove", mover);
+    box.removeEventListener("pointerup", fim);
+    box.removeEventListener("pointercancel", fim);
+    lin.classList.remove("arrastando");
+    atualizarOrganistas();
+  };
+  box.addEventListener("pointermove", mover);
+  box.addEventListener("pointerup", fim);
+  box.addEventListener("pointercancel", fim);
 }
 
 // reordena as caixas pela lista de linhas já na nova ordem
@@ -74,18 +106,15 @@ function ordenarOrganistasAlfabetica() {
   aplicarOrdemOrganistas(linhas.map(x => x[0]));
 }
 
-// renumera rótulos/placeholders/posições; só mostra "×" e o seletor quando há mais de uma caixa
+// renumera rótulos/placeholders; só mostra "×" e a alça quando há mais de uma caixa
 function atualizarOrganistas() {
   const linhas = [...$("orgs").children];
   linhas.forEach((lin, i) => {
-    const c = lin.querySelector("input"), p = lin.querySelector("select"), r = lin.querySelector("button");
+    const c = lin.querySelector("input"), p = lin.querySelector(".alca"), r = lin.querySelector(".rem");
     c.setAttribute("aria-label", "Organista " + (i + 1));
     c.placeholder = i === 0 ? "Nome da organista" : "Organista " + (i + 1);
-    p.innerHTML = "";
-    linhas.forEach((_, k) => p.add(new Option(k + 1, k + 1)));
-    p.value = i + 1;
-    p.setAttribute("aria-label", "Posição da organista " + (i + 1) + " na lista");
-    p.title = "Mudar a posição na lista";
+    p.setAttribute("aria-label", "Mudar a posição da organista " + (i + 1) + " (arraste ou use as setas)");
+    p.title = "Arraste para mudar a posição";
     p.hidden = linhas.length === 1;
     r.setAttribute("aria-label", "Remover organista " + (i + 1));
     r.title = "Remover organista " + (i + 1);
